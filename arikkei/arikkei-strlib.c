@@ -150,10 +150,10 @@ arikkei_strtoull (const uint8_t *s, uint64_t len, uint64_t *val)
 	if ((p >= len) || (s[p] < '0') || (s[p] > '9')) return 0;
 	uint64_t lval = 0;
 	while ((p < len) && (s[p] >= '0') && (s[p] <= '9')) {
-		uint64_t p = lval * 10;
-		uint64_t q = (s[p] - '0');
-		if ((UINT64_MAX - p) < q) break;
-		lval = p + q;
+		uint64_t v0 = lval * 10;
+		uint64_t v1 = (s[p] - '0');
+		if ((UINT64_MAX - v0) < v1) break;
+		lval = v0 + v1;
 		p += 1;
 		if (lval > (UINT64_MAX / 10)) break;
 	}

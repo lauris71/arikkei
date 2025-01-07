@@ -18,30 +18,8 @@
 #endif
 
 #include <stdlib.h>
-#include <string.h>
 
 #include "arikkei-token.h"
-
-ArikkeiToken *
-arikkei_token_set_from_string(ArikkeiToken *token, const uint8_t *cdata) {
-    token->cdata = cdata;
-    token->len = (cdata) ? strlen((const char *) cdata) : 0;
-    return token;
-}
-
-ArikkeiToken *
-arikkei_token_set_from_data(ArikkeiToken *token, const uint8_t *cdata, uint64_t start, uint64_t end) {
-    token->cdata = cdata + start;
-    token->len = end - start;
-    return token;
-}
-
-ArikkeiToken *
-arikkei_token_set_from_token(ArikkeiToken *token, const ArikkeiToken *src) {
-    token->cdata = src->cdata;
-    token->len = src->len;
-    return token;
-}
 
 unsigned int
 arikkei_token_is_equal(const ArikkeiToken *token, const ArikkeiToken *other) {
@@ -73,7 +51,7 @@ arikkei_token_strdup(const ArikkeiToken *token) {
     if (arikkei_token_is_valid(token)) {
         unsigned char *b;
         b = malloc(token->len + 1);
-        if (token->len) strncpy((char *) b, (const char *) token->cdata, token->len);
+        if (token->len) memcpy(b, token->cdata, token->len);
         b[token->len] = 0;
         return b;
     } else {
@@ -286,7 +264,7 @@ arikkei_token_tokenize_ws(ArikkeiToken *token, ArikkeiToken *tokens, int maxtoke
 }
 
 ArikkeiToken *
-arikkei_token_strip_start(ArikkeiToken *token, ArikkeiToken *dst) {
+arikkei_token_strip_start(const ArikkeiToken *token, ArikkeiToken *dst) {
     const unsigned char *p;
     uint64_t s;
     p = token->cdata;

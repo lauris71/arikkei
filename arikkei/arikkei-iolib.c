@@ -160,7 +160,7 @@ arikkei_munmap (const uint8_t *map, uint64_t map_size)
 FILE *
 arikkei_fopen (const uint8_t *file_name, const uint8_t *mode)
 {
-#ifdef WIN32
+#ifdef _WIN32
 	unsigned short *ucs2filename, *ucs2mode;
 	FILE *fs;
 	if (!file_name || !*file_name) return NULL;
@@ -175,17 +175,33 @@ arikkei_fopen (const uint8_t *file_name, const uint8_t *mode)
 #endif
 }
 
+#ifdef _WIN32
 double
 arikkei_get_time (void)
 {
-#ifdef _WIN32
 	struct _timeb t;
 	_ftime (&t);
 	double dtval = (t.time + t.millitm / 1000.0);
+	return dtval;
+}
 #else
+#if defined (_POSIX_TIMERS) && (_POSIX_TIMERS > 0)
+double
+arikkei_get_time (void)
+{
+	struct timespec tspec;
+	clock_gettime(CLOCK_REALTIME, &tspec);
+	double dtval = (tspec.tv_sec + tspec.tv_nsec / 1000000000.0);
+	return dtval;
+}
+#else
+double
+arikkei_get_time (void)
+{
 	struct timeval tv;
 	gettimeofday (&tv, NULL);
 	double dtval = (tv.tv_sec + tv.tv_usec / 1000000.0);
-#endif
 	return dtval;
 }
+#endif
+#endif

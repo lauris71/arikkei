@@ -14,10 +14,10 @@
  */
 
 #include <stdint.h>
-#include <stdlib.h>
-#include <ctype.h>
+#include <string.h>
 
 #include <arikkei/arikkei-strlib.h>
+#include <arikkei/arikkei-utils.h>
 
 #ifndef MIN
 #define MIN(l,r) (((r) < (l)) ? (r) : (l))
@@ -39,12 +39,30 @@ struct _ArikkeiToken {
     uint64_t len;
 };
 
-ArikkeiToken *arikkei_token_set_from_string(ArikkeiToken *token, const uint8_t *cdata);
-ArikkeiToken *arikkei_token_set_from_data(ArikkeiToken *token, const uint8_t *cdata, uint64_t start, uint64_t end);
-ArikkeiToken *arikkei_token_set_from_token(ArikkeiToken *token, const ArikkeiToken *src);
+ARIKKEI_INLINE ArikkeiToken *
+arikkei_token_set_from_string(ArikkeiToken *token, const uint8_t *cdata) {
+    token->cdata = cdata;
+    token->len = (cdata) ? strlen((const char *) cdata) : 0;
+    return token;
+}
+
+ARIKKEI_INLINE ArikkeiToken *
+arikkei_token_set_from_data(ArikkeiToken *token, const uint8_t *cdata, uint64_t start, uint64_t end) {
+    token->cdata = cdata + start;
+    token->len = end - start;
+    return token;
+}
+
+ARIKKEI_INLINE ArikkeiToken *
+arikkei_token_set_from_token(ArikkeiToken *token, const ArikkeiToken *src) {
+    token->cdata = src->cdata;
+    token->len = src->len;
+    return token;
+}
+
 
 #define arikkei_token_is_valid(t) ((t)->cdata != NULL)
-#define arikkei_token_is_empty(t) (!(t)->cdata || ((t)->len == 0))
+#define arikkei_token_is_empty(t) (!(t)->cdata || !(t)->len)
 
 unsigned int arikkei_token_is_equal(const ArikkeiToken *token, const ArikkeiToken *other);
 unsigned int arikkei_token_is_equal_string(const ArikkeiToken *token, const unsigned char *str);
@@ -68,7 +86,7 @@ ArikkeiToken *arikkei_token_next_token(const ArikkeiToken *token, ArikkeiToken *
 unsigned int arikkei_token_tokenize(ArikkeiToken *token, ArikkeiToken *tokens, int maxtokens, unsigned int space_is_separator, unsigned int multi);
 unsigned int arikkei_token_tokenize_ws(ArikkeiToken *token, ArikkeiToken *tokens, int maxtokens, const unsigned char *ws, unsigned int multi);
 
-ArikkeiToken *arikkei_token_strip_start(ArikkeiToken *token, ArikkeiToken *dst);
+ArikkeiToken *arikkei_token_strip_start(const ArikkeiToken *token, ArikkeiToken *dst);
 ArikkeiToken *arikkei_token_strip_start_ws(ArikkeiToken *token, ArikkeiToken *dst, const unsigned char *ws);
 ArikkeiToken *arikkei_token_strip_end(ArikkeiToken *token, ArikkeiToken *dst);
 ArikkeiToken *arikkei_token_strip_end_ws(ArikkeiToken *token, ArikkeiToken *dst, const unsigned char *ws);
