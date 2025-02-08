@@ -22,99 +22,61 @@
 #include "arikkei-token.h"
 
 unsigned int
-arikkei_token_is_equal(const ArikkeiToken *token, const ArikkeiToken *other) {
-    if (!arikkei_token_is_valid(token)) return 0;
-    if (!arikkei_token_is_valid(other)) return 0;
-    if (!arikkei_token_is_empty(token)) {
-        if (!arikkei_token_is_empty(other)) {
-            return ((token->len == other->len) && !strncmp((const char *) token->cdata, (const char *) other->cdata, token->len));
-        } else {
-            return 0;
-        }
+arikkei_token_is_equal(const ArikkeiToken lhs, const ArikkeiToken rhs) {
+    if (lhs.len) {
+        if (rhs.len != lhs.len) return 0;
+        return !memcmp(lhs.cdata, rhs.cdata, lhs.len);
     } else {
-        if (!arikkei_token_is_empty(other)) {
-            return 0;
-        } else {
-            return 1;
-        }
+        return !rhs.len;
     }
-}
-
-unsigned int
-arikkei_token_is_equal_string(const ArikkeiToken *token, const unsigned char *str) {
-    if (!arikkei_token_is_valid(token)) return 0;
-    return !arikkei_token_strcmp(token, str);
 }
 
 uint8_t *
-arikkei_token_strdup(const ArikkeiToken *token) {
-    if (arikkei_token_is_valid(token)) {
-        unsigned char *b;
-        b = malloc(token->len + 1);
-        if (token->len) memcpy(b, token->cdata, token->len);
-        b[token->len] = 0;
-        return b;
-    } else {
-        return NULL;
-    }
+arikkei_token_strdup(const ArikkeiToken token) {
+    uint8_t *b = malloc(token.len + 1);
+    memcpy(b, token.cdata, token.len);
+    b[token.len] = 0;
+    return b;
 }
 
 uint64_t
-arikkei_token_strcpy(const ArikkeiToken *token, uint8_t *b) {
-    if (arikkei_token_is_valid(token)) {
-        if (token->len) strncpy((char *) b, (const char *) token->cdata, token->len);
-        b[token->len] = 0;
-        return token->len;
-    } else {
-        b[0] = 0;
-        return 0;
-    }
+arikkei_token_strcpy(const ArikkeiToken token, uint8_t *b) {
+    memcpy(b, token.cdata, token.len);
+    b[token.len] = 0;
+    return token.len;
 }
 
 uint64_t
-arikkei_token_strncpy(const ArikkeiToken *token, uint8_t *b, uint64_t size) {
-    if (size < 1) return 0;
-    if (arikkei_token_is_valid(token) && (size > 1)) {
-        uint64_t len = token->len;
-        if (len > (size - 1)) len = size - 1;
-        if (len) strncpy((char *) b, (const char *) token->cdata, len);
-        b[len] = 0;
-        return len;
-    } else {
-        b[0] = 0;
-        return 0;
-    }
+arikkei_token_strncpy(const ArikkeiToken token, uint8_t *b, uint64_t size) {
+    if (!size) return 0;
+    uint64_t len = (token.len < (size - 1)) ? token.len : size - 1;
+    memcpy(b, token.cdata, len);
+    b[len] = 0;
+    return len;
 }
 
 int
-arikkei_token_strcmp(const ArikkeiToken *token, const uint8_t *str) {
-    if (!arikkei_token_is_valid(token)) return -1;
-    if (str) {
-        return arikkei_token_strncmp(token, str, strlen((const char *) str));
-    } else {
-        return arikkei_token_is_empty(token);
-    }
+arikkei_token_strcmp(const ArikkeiToken token, const uint8_t *str) {
+    return arikkei_token_strncmp(token, str, strlen((const char *) str));
 }
 
 int
-arikkei_token_strncmp(const ArikkeiToken *token, const uint8_t *str, uint64_t size) {
-    if (!arikkei_token_is_valid(token)) return -1;
-    if (!arikkei_token_is_empty(token)) {
-        if (size > 0) {
-            uint64_t len, clen;
+arikkei_token_strncmp(const ArikkeiToken lhs, const uint8_t *rhs, uint64_t rhs_len) {
+    if (!lhs.len) {
+        if (rhs_len) {
+            uint64_t clen;
             int cval;
-            len = token->len;
-            clen = (len < size) ? len : size;
-            cval = strncmp((const char *) token->cdata, (const char *) str, clen);
+            clen = (lhs.len < rhs_len) ? lhs.len : rhs_len;
+            cval = memcmp(lhs.cdata, rhs, clen);
             if (cval) return cval;
-            if (len < size) return -1;
-            if (len > size) return 1;
+            if (lhs.len < rhs_len) return -1;
+            if (lhs.len > rhs_len) return 1;
             return 0;
         } else {
             return 1;
         }
     } else {
-        if (size > 0) {
+        if (rhs_len > 0) {
             return -1;
         } else {
             return 0;
@@ -122,84 +84,54 @@ arikkei_token_strncmp(const ArikkeiToken *token, const uint8_t *str, uint64_t si
     }
 }
 
-ArikkeiToken *
-arikkei_token_get_first_line(const ArikkeiToken *token, ArikkeiToken *dst) {
-    return arikkei_token_get_line(token, dst, 0);
+ArikkeiToken
+arikkei_token_get_line(const ArikkeiToken token, uint64_t start) {
+    if (start < token.len) {
+        const uint8_t *p = token.cdata;
+        uint64_t e = start;
+        while ((e < token.len) && ((p[e] >= 32) || (p[e] == 9))) e += 1;
+        return (ArikkeiToken) {p + start, e - start};
+    } else {
+        return (ArikkeiToken) {token.cdata + token.len, 0};
+    }
 }
 
-ArikkeiToken *
-arikkei_token_get_line(const ArikkeiToken *token, ArikkeiToken *dst, uint64_t start) {
-    if (!arikkei_token_is_empty(token)) {
-        const unsigned char *p;
-        uint64_t e;
-        p = token->cdata;
-        e = start;
-        while ((e < token->len) && ((p[e] >= 32) || (p[e] == 9))) e += 1;
-        arikkei_token_set_from_data(dst, p, start, e);
+ArikkeiToken
+arikkei_token_next_line(const ArikkeiToken token, const ArikkeiToken line) {
+    uint64_t start = line.cdata + line.len - token.cdata;
+    if (start < token.len) {
+        const uint8_t *p = token.cdata;
+        uint64_t s = start;
+        while ((s < token.len) && ((p[s] < 32) && (p[s] != 9))) s += 1;
+        uint64_t e = s;
+        while ((e < token.len) && ((p[e] >= 32) || (p[e] == 9))) e += 1;
+        return (ArikkeiToken) {p + start, e - start};
     } else {
-        arikkei_token_set_from_data(dst, token->cdata, 0, 0);
+        return (ArikkeiToken) {token.cdata + token.len, 0};
     }
-    return dst;
 }
 
-ArikkeiToken *
-arikkei_token_next_line(const ArikkeiToken *token, ArikkeiToken *dst, const ArikkeiToken *line) {
-    if (!arikkei_token_is_empty(token)) {
-        if (arikkei_token_is_valid(line)) {
-            const unsigned char *p;
-            uint64_t s;
-            p = token->cdata;
-            s = (line->cdata + line->len) - token->cdata;
-            while ((s < token->len) && (p[s] < 32) && (p[s] != 9)) s += 1;
-            return arikkei_token_get_line(token, dst, s);
-        } else {
-            return arikkei_token_get_first_line(token, dst);
-        }
+ArikkeiToken
+arikkei_token_get_token(const ArikkeiToken token, uint64_t start, unsigned int space_is_separator) {
+    if (start < token.len) {
+        const uint8_t *p = token.cdata;
+        while ((start < token.len) && ((p[start] < 32) || ((p[start] == 32) && space_is_separator))) start += 1;
+        uint64_t e = start;
+        while ((e < token.len) && ((p[e] > 32) || ((p[e] == 32) && !space_is_separator))) e += 1;
+        return (ArikkeiToken) {p + start, e - start};
     } else {
-        arikkei_token_set_from_data(dst, token->cdata, 0, 0);
+        return (ArikkeiToken) {token.cdata + token.len, 0};
     }
-    return dst;
 }
 
-ArikkeiToken *
-arikkei_token_get_token(const ArikkeiToken *token, ArikkeiToken *dst, uint64_t start, unsigned int space_is_separator) {
-    if (!arikkei_token_is_empty(token)) {
-        const unsigned char *p;
-        p = token->cdata;
-        while ((start < token->len) && (p[start] == 32)) start += 1;
-        if (start < token->len) {
-            uint64_t e;
-            e = start;
-            while ((e < token->len) && ((p[e] > 32) || ((p[e] == 32) && !space_is_separator))) e += 1;
-            arikkei_token_set_from_data(dst, token->cdata, start, e);
-        } else {
-            arikkei_token_set_from_data(dst, token->cdata, start, token->len);
-        }
-    } else {
-        arikkei_token_set_from_data(dst, token->cdata, 0, 0);
-    }
-    return dst;
-}
-
-ArikkeiToken *
-arikkei_token_next_token(const ArikkeiToken *token, ArikkeiToken *dst, const ArikkeiToken *prev, unsigned int space_is_separator) {
-    if (!arikkei_token_is_empty(token)) {
-        if (arikkei_token_is_valid(prev)) {
-            uint64_t s;
-            s = (prev->cdata + prev->len) - token->cdata;
-            return arikkei_token_get_token(token, dst, s, space_is_separator);
-        } else {
-            return arikkei_token_get_token(token, dst, 0, space_is_separator);
-        }
-    } else {
-        arikkei_token_set_from_data(dst, token->cdata, 0, 0);
-    }
-    return dst;
+ArikkeiToken
+arikkei_token_next_token(const ArikkeiToken token, const ArikkeiToken prev, unsigned int space_is_separator) {
+    return arikkei_token_get_token(token, prev.cdata + prev.len - token.cdata, space_is_separator);
 }
 
 unsigned int
 arikkei_token_tokenize(ArikkeiToken *token, ArikkeiToken *tokens, int maxtokens, unsigned int space_is_separator, unsigned int multi) {
-    const unsigned char *p;
+    const uint8_t *p;
     uint64_t s;
     int ntokens;
     if (arikkei_token_is_empty(token)) return 0;
@@ -224,7 +156,7 @@ arikkei_token_tokenize(ArikkeiToken *token, ArikkeiToken *tokens, int maxtokens,
 }
 
 unsigned int
-arikkei_token_tokenize_ws(ArikkeiToken *token, ArikkeiToken *tokens, int maxtokens, const unsigned char *ws, unsigned int multi) {
+arikkei_token_tokenize_ws(ArikkeiToken *token, ArikkeiToken *tokens, int maxtokens, const uint8_t *ws, unsigned int multi) {
     uint64_t len, s;
     int ntokens;
     if (arikkei_token_is_empty(token)) return 0;
@@ -265,7 +197,7 @@ arikkei_token_tokenize_ws(ArikkeiToken *token, ArikkeiToken *tokens, int maxtoke
 
 ArikkeiToken *
 arikkei_token_strip_start(const ArikkeiToken *token, ArikkeiToken *dst) {
-    const unsigned char *p;
+    const uint8_t *p;
     uint64_t s;
     p = token->cdata;
     s = 0;
@@ -277,7 +209,7 @@ arikkei_token_strip_start(const ArikkeiToken *token, ArikkeiToken *dst) {
 }
 
 ArikkeiToken *
-arikkei_token_strip_start_ws(ArikkeiToken *token, ArikkeiToken *dst, const unsigned char *ws) {
+arikkei_token_strip_start_ws(ArikkeiToken *token, ArikkeiToken *dst, const uint8_t *ws) {
     uint64_t len, s;
     len = strlen((const char *) ws);
     s = 0;
@@ -297,7 +229,7 @@ arikkei_token_strip_start_ws(ArikkeiToken *token, ArikkeiToken *dst, const unsig
 
 ArikkeiToken *
 arikkei_token_strip_end(ArikkeiToken *token, ArikkeiToken *dst) {
-    const unsigned char *p;
+    const uint8_t *p;
     int e;
     p = token->cdata;
     e = (int) token->len - 1;
@@ -309,7 +241,7 @@ arikkei_token_strip_end(ArikkeiToken *token, ArikkeiToken *dst) {
 }
 
 ArikkeiToken *
-arikkei_token_strip_end_ws(ArikkeiToken *token, ArikkeiToken *dst, const unsigned char *ws) {
+arikkei_token_strip_end_ws(ArikkeiToken *token, ArikkeiToken *dst, const uint8_t *ws) {
     uint64_t len;
     int e;
     len = strlen((const char *) ws);
@@ -330,7 +262,7 @@ arikkei_token_strip_end_ws(ArikkeiToken *token, ArikkeiToken *dst, const unsigne
 
 ArikkeiToken *
 arikkei_token_strip(ArikkeiToken *token, ArikkeiToken *dst) {
-    const unsigned char *p;
+    const uint8_t *p;
     int s;
     int e;
     p = token->cdata;
@@ -345,7 +277,7 @@ arikkei_token_strip(ArikkeiToken *token, ArikkeiToken *dst) {
 }
 
 ArikkeiToken *
-arikkei_token_strip_ws(ArikkeiToken *token, ArikkeiToken *dst, const unsigned char *ws) {
+arikkei_token_strip_ws(ArikkeiToken *token, ArikkeiToken *dst, const uint8_t *ws) {
     uint64_t len;
     int s, e;
     len = strlen((const char *) ws);
@@ -373,9 +305,9 @@ arikkei_token_strip_ws(ArikkeiToken *token, ArikkeiToken *dst, const unsigned ch
     return dst;
 }
 
-unsigned char *
-arikkei_token_strconcat(const ArikkeiToken *tokens, int size, const unsigned char *separator) {
-    unsigned char *str, *p;
+uint8_t *
+arikkei_token_strconcat(const ArikkeiToken *tokens, int size, const uint8_t *separator) {
+    uint8_t *str, *p;
     uint64_t slen, len;
     int i;
     slen = strlen((const char *) separator);
@@ -389,11 +321,34 @@ arikkei_token_strconcat(const ArikkeiToken *tokens, int size, const unsigned cha
             strncpy((char *) p, (const char *) separator, slen);
             p += slen;
         }
-        p += arikkei_token_strcpy(tokens + i, p);
+        p += arikkei_token_strcpy(tokens[i], p);
     }
     return str;
 }
 
+uint8_t *
+arikkei_token_join(const ArikkeiToken tokens[], int n_tokens, const ArikkeiToken separator)
+{
+    uint8_t *str, *p;
+    uint64_t len;
+    int i;
+    len = 0;
+    if (n_tokens) {
+        for (i = 0; i < n_tokens; i++) len += tokens[i].len;
+        len += (n_tokens - 1) * separator.len;
+    }
+    str = malloc(len + 1);
+    p = str;
+    for (i = 0; i < n_tokens; i++) {
+        if (i > 0) {
+            memcpy(p, separator.cdata, separator.len);
+            p += separator.len;
+        }
+        memcpy(p, tokens[i].cdata, tokens[i].len);
+        p += tokens[i].len;
+    }
+    return str;
+}
 
 
 

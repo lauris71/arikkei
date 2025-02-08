@@ -184,8 +184,7 @@ arikkei_get_time (void)
 	double dtval = (t.time + t.millitm / 1000.0);
 	return dtval;
 }
-#else
-#if defined (_POSIX_TIMERS) && (_POSIX_TIMERS > 0)
+#elif defined (_POSIX_TIMERS) && (_POSIX_TIMERS > 0)
 double
 arikkei_get_time (void)
 {
@@ -203,5 +202,4 @@ arikkei_get_time (void)
 	double dtval = (tv.tv_sec + tv.tv_usec / 1000000.0);
 	return dtval;
 }
-#endif
 #endif
