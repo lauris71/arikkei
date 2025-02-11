@@ -14,3 +14,5 @@ add_subdirectory(arikkei)
 if(BUILD_TESTING)
   add_subdirectory(tests)
 endif()
+
+set(HAS_ARIKKEI true PARENT_SCOPE)
