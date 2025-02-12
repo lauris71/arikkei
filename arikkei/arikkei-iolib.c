@@ -56,7 +56,7 @@ static size_t total = 0;
 #ifdef _WIN32
 
 const unsigned char *
-arikkei_mmap (const unsigned char *filename, uint64_t *size);
+arikkei_mmap (const unsigned char *filename, uint64_t *size)
 {
 	unsigned short *ucs2filename;
 	unsigned char *cdata;
