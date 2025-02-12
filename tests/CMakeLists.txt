@@ -11,10 +11,11 @@ target_compile_definitions(arikkei_test PRIVATE UNITY_INCLUDE_DOUBLE)
 target_include_directories(arikkei_test PRIVATE ${CMAKE_SOURCE_DIR} ..)
 target_link_directories(arikkei_test PRIVATE ${CMAKE_BINARY_DIR}/libarikkei)
 
-target_link_libraries(arikkei_test PRIVATE
-    arikkei
-    ${MATH_LIBRARY}
-)
+target_link_libraries(arikkei_test PRIVATE arikkei)
+
+if(MATH_LIBRARY)
+    target_link_libraries(arikkei_test PRIVATE ${MATH_LIBRARY})
+endif()
 
 add_test(NAME memcpy COMMAND arikkei_test memcpy)
 add_test(NAME join COMMAND arikkei_test join)
