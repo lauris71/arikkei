@@ -58,14 +58,14 @@ static size_t total = 0;
 const unsigned char *
 arikkei_mmap (const unsigned char *filename, uint64_t *size)
 {
-	unsigned short *ucs2filename;
+	uint16_t *ucs2filename;
 	unsigned char *cdata;
 	struct _stat st;
 	HANDLE fh, mh;
 
 	if (!filename || !*filename) return NULL;
 
-	ucs2filename = arikkei_utf8_ucs2_strdup (filename);
+	ucs2filename = arikkei_utf8_to_utf16_strdup (filename);
 
 	if (_wstat (ucs2filename, &st)) {
 		/* No such file */
@@ -87,7 +87,7 @@ arikkei_mmap (const unsigned char *filename, uint64_t *size)
 		/* Mapping failed */
 		/* fprintf (stderr, "arikkei_mmap: File %s cannot be mapped as %s\n", filename, mapname); */
 		DWORD ecode = GetLastError ();
-		fprintf (stderr, "arikkei_mmap: File %s cannot be mapped as %s (Error %d)\n", filename, mapname, ecode);
+		fprintf (stderr, "arikkei_mmap: File %s cannot be mapped (Error %d)\n", filename, ecode);
 		CloseHandle (fh);
 		free (ucs2filename);
 		return NULL;
@@ -164,8 +164,8 @@ arikkei_fopen (const uint8_t *file_name, const uint8_t *mode)
 	unsigned short *ucs2filename, *ucs2mode;
 	FILE *fs;
 	if (!file_name || !*file_name) return NULL;
-	ucs2filename = arikkei_utf8_ucs2_strdup (file_name);
-	ucs2mode = arikkei_utf8_ucs2_strdup (mode);
+	ucs2filename = arikkei_utf8_to_utf16_strdup (file_name);
+	ucs2mode = arikkei_utf8_to_utf16_strdup (mode);
 	fs = _wfopen (ucs2filename, ucs2mode);
 	free (ucs2filename);
 	free (ucs2mode);
