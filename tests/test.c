@@ -403,7 +403,7 @@ static void test_utf8()
     for (int i = 0; i < 3; i++) {
         for(int j = 0; j < 3; j++) {
             uint8_t c[32];
-            memcpy((char *) c, (const char *) utf8_4_last, 32);
+            memcpy((char *) c, (const char *) utf8_4_last, 5);
             c[i + 1] = error_vals[j];
             const uint8_t *p = &c[0];
             TEST_ASSERT_EQUAL_INT64(-1, arikkei_utf8_get_unicode(&p, 5));
