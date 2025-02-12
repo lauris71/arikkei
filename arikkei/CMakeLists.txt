@@ -23,18 +23,13 @@ set(ARIKKEI_SOURCES
     tinycthread.c
 )
 
-add_library(arikkei_obj OBJECT
+add_library(arikkei STATIC
 	${ARIKKEI_HEADERS}
 	${ARIKKEI_SOURCES}
 )
 
-set_property(TARGET arikkei_obj PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_property(TARGET arikkei PROPERTY POSITION_INDEPENDENT_CODE ON)
 
-target_include_directories(arikkei_obj PUBLIC
-    ${CMAKE_SOURCE_DIR}/arikkei
-)
-
-add_library(arikkei STATIC
-    ${ARIKKEI_HEADERS}
-    $<TARGET_OBJECTS:arikkei_obj>
+target_include_directories(arikkei PUBLIC
+    ${PROJECT_SOURCE_DIR}
 )

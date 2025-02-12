@@ -15,4 +15,7 @@ if(BUILD_TESTING)
   add_subdirectory(tests)
 endif()
 
-set(HAS_ARIKKEI true PARENT_SCOPE)
+# If this is part of another project, inform the parent build system
+if(NOT PROJECT_IS_TOP_LEVEL)
+  set(HAS_ARIKKEI true PARENT_SCOPE)
+endif()
