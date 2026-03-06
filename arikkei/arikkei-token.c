@@ -62,7 +62,7 @@ arikkei_token_strcmp(const ArikkeiToken token, const uint8_t *str) {
 
 int
 arikkei_token_strncmp(const ArikkeiToken lhs, const uint8_t *rhs, uint64_t rhs_len) {
-    if (!lhs.len) {
+    if (lhs.len) {
         if (rhs_len) {
             uint64_t clen;
             int cval;

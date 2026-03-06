@@ -25,7 +25,7 @@ In build directory invoke
 
 ### arikkei-strlib
 
-- convenience stcpy methods - NULL is valid string, destination can be NULL
+- convenience memcpy/strcpy methods - NULL is valid string, destination can be NULL
 - methods to convert between utf8 and utf16
 - integer <-> string conversion
 - double <-> string conversion
