@@ -43,6 +43,32 @@ dict_entry_ptr(ArikkeiDict *dict, unsigned int pos)
 	return entry_ptr(dict, dict->entries, pos);
 }
 
+static void *
+key_ptr(ArikkeiDict *dict, ArikkeiDictEntry *entry)
+{
+	return (char *) entry + dict->key_offset;
+}
+
+static void *
+val_ptr(ArikkeiDict *dict, ArikkeiDictEntry *entry)
+{
+	return (char *) entry + dict->val_offset;
+}
+
+static void *
+dict_key_ptr(ArikkeiDict *dict, unsigned int pos)
+{
+	ArikkeiDictEntry *entry = dict_entry_ptr(dict, pos);
+	return (char *) entry + dict->key_offset;
+}
+
+static void *
+dict_val_ptr(ArikkeiDict *dict, unsigned int pos)
+{
+	ArikkeiDictEntry *entry = dict_entry_ptr(dict, pos);
+	return (char *) entry + dict->val_offset;
+}
+
 #define ROOT_ENTRY(d,i) ((ArikkeiDictEntry *) ((char *) (d)->entries + (d)->root_size * (d)->entry_size + (i) * (d)->entry_size))
 
 #define ENTRY(d,i) ((ArikkeiDictEntry *) ((char *) (d)->entries + (i) * (d)->entry_size))
@@ -66,20 +92,6 @@ set_entry(ArikkeiDict *dict, unsigned int pos, unsigned int next, const void *ke
 	} else {
 		memcpy(val_ptr, val, dict->val_size);
 	}
-}
-
-static void *
-dict_key_ptr(ArikkeiDict *dict, unsigned int pos)
-{
-	ArikkeiDictEntry *entry = ENTRY(dict, pos);
-	return (char *) entry + dict->key_offset;
-}
-
-static void *
-dict_val_ptr(ArikkeiDict *dict, unsigned int pos)
-{
-	ArikkeiDictEntry *entry = ENTRY(dict, pos);
-	return (char *) entry + dict->val_offset;
 }
 
 static ArikkeiDictEntry *
@@ -282,11 +294,13 @@ const void *
 arikkei_dict_lookup (ArikkeiDict *dict, const void *key)
 {
 	unsigned int pos = dict->_hash(&key) % dict->root_size;
-	if (dict->entries[pos].next == EMPTY) return NULL;
-	do {
-		if (dict->_equal (&key, dict_key_ptr(dict, pos))) return &dict->entries[pos].val;
-		pos = dict->entries[pos].next;
-	} while (pos != END);
+	ArikkeiDictEntry *entry = dict_entry_ptr(dict, pos);
+	if (entry->next == EMPTY) return NULL;
+	if (dict->_equal (&key, key_ptr(dict, entry))) return val_ptr(dict, entry);
+	for (pos = entry->next; pos != END; pos = entry->next) {
+		entry = dict_entry_ptr(dict, pos);
+		if (dict->_equal (&key, key_ptr(dict, entry))) return val_ptr(dict, entry);
+	}
 	return NULL;
 }
 
@@ -303,18 +317,13 @@ arikkei_dict_lookup_pval (ArikkeiDict *dict, const void *key)
 }
 
 const void *
-arikkei_dict_lookup_foreign (ArikkeiDict *dict, const void *key, unsigned int (*hash) (const void *key), unsigned int (*equal) (const void *lhs, const void *rhs))
+arikkei_dict_lookup_foreign (ArikkeiDict *dict, const void *foreign_key, unsigned int (*hash) (const void *key), unsigned int (*equal) (const void *lhs, const void *rhs))
 {
-	unsigned int hval, pos;
-	if (!key) return NULL;
-	hval = hash(key) % dict->root_size;
-	pos = hval;
-	if (dict->entries[pos].next == EMPTY) return NULL;
+	if (!foreign_key) return NULL;
+	unsigned int pos = hash(foreign_key) % dict->root_size;
+	if (dict_entry_ptr(dict, pos)->next == EMPTY) return NULL;
 	do {
-		const void *k, *v;
-		memcpy(&k, dict_key_ptr(dict, pos), 8);
-		memcpy(&v, dict_val_ptr(dict, pos), 8);
-		if (equal (key, k)) return v;
+		if (equal (foreign_key, dict_key_ptr(dict, pos))) return dict_val_ptr(dict, pos);
 		pos = dict->entries[pos].next;
 	} while (pos != END);
 	return NULL;

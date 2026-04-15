@@ -68,7 +68,7 @@ const void *arikkei_dict_lookup_pval(ArikkeiDict *dict, const void *key);
  * This is, e.g. needed to look up null-terminated string hasb by buffer/len pair or
  * if key is based on several fields of value
  */
-const void *arikkei_dict_lookup_foreign (ArikkeiDict *dict, const void *key, unsigned int (*hash) (const void *foreign_key), unsigned int (*equal) (const void *foreign_key, const void *dict_key));
+const void *arikkei_dict_lookup_foreign (ArikkeiDict *dict, const void *foreign_key, unsigned int (*hash) (const void *foreign_key), unsigned int (*equal) (const void *foreign_key, const void *dict_key));
 /* Stop if forall returns 0 */
 unsigned int arikkei_dict_forall (ArikkeiDict *dict, unsigned int (* forall) (const void *, const void *, void *), void *data);
 /* Remove entry if remove returns 1, return number of entries removed */
