@@ -16,6 +16,8 @@ static void test_dtoa();
 static void test_utf8();
 static void test_utf16();
 
+void test_dict();
+
 void setUp(void) {
     // set stuff up here
 }
@@ -45,6 +47,8 @@ main(int argc, const char *argv[])
             RUN_TEST(test_utf8);
         } else if (!strcmp(argv[i], "utf8")) {
             RUN_TEST(test_utf16);
+        } else if (!strcmp(argv[i], "dict")) {
+            RUN_TEST(test_dict);
         }
     }
     return UNITY_END();

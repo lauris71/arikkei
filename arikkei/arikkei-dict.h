@@ -13,6 +13,8 @@
  *
  */
 
+ #include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -23,26 +25,44 @@ typedef struct _ArikkeiDictEntry ArikkeiDictEntry;
 struct _ArikkeiDict {
 	unsigned int root_size;
 	unsigned int size;
+	unsigned int entry_size;
+	uint16_t key_offset;
+	uint16_t key_size;
+	uint16_t val_offset;
+	uint16_t val_size;
 	ArikkeiDictEntry *entries;
 	unsigned int free;
-	unsigned int (* hash) (const void *data);
-	unsigned int (* equal) (const void *l, const void *r);
+	unsigned int (*_hash) (const void *data);
+	/**
+	 * @brief Compare two keys for equality
+	 * 
+	 * @param lhs left hand side key
+	 * @param rhs right hand side key
+	 * @return 1 if keys are equal, 0 otherwise
+	 */
+	unsigned int (*_equal) (const void *lhs, const void *rhs);
+	void (*copy_key) (void *dst, const void *src);
+	void (*free_key) (void *key);
+	void (*copy_value) (void *dst, const void *src);
+	void (*free_value) (void *value);
 };
 
 void arikkei_dict_setup_full (ArikkeiDict *dict, unsigned int hashsize,
-			      unsigned int (* hash) (const void *key),
-			      unsigned int (* equal) (const void *lhs, const void *rhs));
+			      unsigned int (*hash) (const void *key),
+			      unsigned int (*equal) (const void *lhs, const void *rhs));
 void arikkei_dict_setup_string (ArikkeiDict *dict, unsigned int hashsize);
 void arikkei_dict_setup_pointer (ArikkeiDict *dict, unsigned int hashsize);
 void arikkei_dict_setup_int32 (ArikkeiDict *dict, unsigned int hashsize);
 void arikkei_dict_setup_int64 (ArikkeiDict *dict, unsigned int hashsize);
 void arikkei_dict_release (ArikkeiDict *dict);
 
-void arikkei_dict_insert (ArikkeiDict *dict, const void *key, const void *val);
-void arikkei_dict_remove (ArikkeiDict *dict, const void *key);
-void arikkei_dict_clear (ArikkeiDict *dict);
-unsigned int arikkei_dict_exists (ArikkeiDict *dict, const void *key);
-const void *arikkei_dict_lookup (ArikkeiDict *dict, const void *key);
+void arikkei_dict_insert(ArikkeiDict *dict, const void *key, const void *val);
+void arikkei_dict_insert_pval(ArikkeiDict *dict, const void *key, const void *val);
+void arikkei_dict_remove(ArikkeiDict *dict, const void *key);
+void arikkei_dict_clear(ArikkeiDict *dict);
+unsigned int arikkei_dict_exists(ArikkeiDict *dict, const void *key);
+const void *arikkei_dict_lookup(ArikkeiDict *dict, const void *key);
+const void *arikkei_dict_lookup_pval(ArikkeiDict *dict, const void *key);
 /*
  * Lookup using foreign key with hash and equal provided by caller (lhs is foreign)
  * This is, e.g. needed to look up null-terminated string hasb by buffer/len pair or

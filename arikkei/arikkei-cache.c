@@ -140,7 +140,8 @@ arikkei_cache_insert (ArikkeiCache *cache, const void *key, void *object, unsign
 		if (cache->object_free) cache->object_free (object);
 		return;
 	}
-	pos = (int) ((const char *) arikkei_dict_lookup (&cache->dict, key) - (const char *) 0) - 1;
+	const char **ptr = (const char **) arikkei_dict_lookup(&cache->dict, key);
+	pos = (ptr) ? (int) (*ptr - (const char *) 0) - 1 : -1;
 	if (pos >= 0) {
 		/* There is existing entry with the same key */
 		if (cache->entries[pos].object == object) {
@@ -187,7 +188,8 @@ arikkei_cache_insert (ArikkeiCache *cache, const void *key, void *object, unsign
 	if (cache->entries[pos].next >= 0) cache->entries[cache->entries[pos].next].prev = pos;
 	cache->entries[pos].prev = -1;
 	if (cache->last < 0) cache->last = pos;
-	arikkei_dict_insert (&cache->dict, cache->entries[pos].key, (const char *) 0 + pos + 1);
+	void *valptr = (char *) 0 + pos + 1;
+	arikkei_dict_insert_pval (&cache->dict, cache->entries[pos].key, valptr);
 	cache->currentsize += size;
 }
 
@@ -195,7 +197,8 @@ void
 arikkei_cache_remove (ArikkeiCache *cache, const void *key)
 {
 	int pos;
-	pos = (int) ((const char *) arikkei_dict_lookup (&cache->dict, key) - (const char *) 0) - 1;
+	const char **ptr = (const char **) arikkei_dict_lookup(&cache->dict, key);
+	pos = (ptr) ? (int) (*ptr - (const char *) 0) - 1 : -1;
 	if (pos < 0) return;
 	arikkei_cache_remove_entry (cache, pos);
 }
@@ -204,7 +207,8 @@ const void *
 arikkei_cache_lookup (ArikkeiCache *cache, const void *key)
 {
 	int pos;
-	pos = (int) ((const char *) arikkei_dict_lookup (&cache->dict, key) - (const char *) 0) - 1;
+	const char **ptr = (const char **) arikkei_dict_lookup(&cache->dict, key);
+	pos = (ptr) ? (int) (*ptr - (const char *) 0) - 1 : -1;
 	if (pos >= 0) {
 		remove_entry_from_list (cache, pos);
 		cache->free = cache->entries[pos].next;
@@ -221,7 +225,8 @@ const void *
 arikkei_cache_lookup_notouch (ArikkeiCache *cache, const void *key)
 {
 	int pos;
-	pos = (int) ((const char *) arikkei_dict_lookup (&cache->dict, key) - (const char *) 0) - 1;
+	const char **ptr = (const char **) arikkei_dict_lookup(&cache->dict, key);
+	pos = (ptr) ? (int) (*ptr - (const char *) 0) - 1 : -1;
 	return (pos >= 0) ? cache->entries[pos].object : NULL;
 }
 

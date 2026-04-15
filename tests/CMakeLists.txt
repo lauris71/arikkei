@@ -5,6 +5,7 @@ find_library(MATH_LIBRARY m)
 add_executable(arikkei_test
     unity/unity.c
     test.c
+    dict.c
 )
 
 target_compile_definitions(arikkei_test PRIVATE UNITY_INCLUDE_DOUBLE)
@@ -25,3 +26,4 @@ add_test(NAME itoa COMMAND arikkei_test itoa)
 add_test(NAME dtoa COMMAND arikkei_test dtoa)
 add_test(NAME utf8 COMMAND arikkei_test utf8)
 add_test(NAME utf16 COMMAND arikkei_test utf16)
+add_test(NAME dict COMMAND arikkei_test dict)
