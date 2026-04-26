@@ -116,7 +116,7 @@ remove_entry_from_list (ArikkeiCache *cache, int pos)
 static void
 arikkei_cache_remove_entry (ArikkeiCache *cache, int pos)
 {
-	arikkei_dict_remove (&cache->dict, cache->entries[pos].key);
+	arikkei_dict_remove_pval (&cache->dict, cache->entries[pos].key);
 	if (cache->key_free) cache->key_free (cache->entries[pos].key);
 	if (cache->object_free) cache->object_free (cache->entries[pos].object);
 	cache->currentsize -= cache->entries[pos].size;
@@ -157,7 +157,7 @@ arikkei_cache_insert (ArikkeiCache *cache, const void *key, void *object, unsign
 		} else {
 			/* Remove existing object */
 			remove_entry_from_list (cache, pos);
-			arikkei_dict_remove (&cache->dict, cache->entries[pos].key);
+			arikkei_dict_remove_pval (&cache->dict, cache->entries[pos].key);
 			if (cache->key_free) cache->key_free (cache->entries[pos].key);
 			if (cache->object_free) cache->object_free (cache->entries[pos].object);
 			cache->currentsize -= cache->entries[pos].size;

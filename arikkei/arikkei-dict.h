@@ -56,11 +56,44 @@ void arikkei_dict_setup_int32 (ArikkeiDict *dict, unsigned int hashsize);
 void arikkei_dict_setup_int64 (ArikkeiDict *dict, unsigned int hashsize);
 void arikkei_dict_release (ArikkeiDict *dict);
 
+/**
+ * @brief Insert a value into hash table
+ * 
+ * Keep in mind that it is the the dereferenced key that is copied into the hash table. Thus, if the
+ * hash table should associate const char * with a value, the key should be a pointer to a const char *
+ * (i.e. const char **).
+ * A similar consideration applies to the value. It is the dereferenced value that is copied into the hash table.
+ * The copy_key and copy_value functions are called (if present), otherwise memcpy is used to transfer key_size
+ * and value_size bytes.
+ * 
+ * @param dict The hash table
+ * @param key a pointer to the key
+ * @param val a pointer to the value
+ */
 void arikkei_dict_insert(ArikkeiDict *dict, const void *key, const void *val);
-void arikkei_dict_insert_pval(ArikkeiDict *dict, const void *key, const void *val);
-void arikkei_dict_remove(ArikkeiDict *dict, const void *key);
+/**
+ * @brief Remove a key/value pair from the hash table
+ * 
+ * @param dict The hash table
+ * @param key a pointer to the key
+ * @return 1 if pair was removed, 0 if there was no such key
+ */
+unsigned int arikkei_dict_remove(ArikkeiDict *dict, const void *key);
+
+static inline void
+arikkei_dict_insert_pval (ArikkeiDict *dict, const void *key, const void *val)
+{
+	arikkei_dict_insert(dict, &key, &val);
+}
+
+static inline unsigned int
+arikkei_dict_remove_pval (ArikkeiDict *dict, const void *key)
+{
+	return arikkei_dict_remove(dict, &key);
+}
+
 void arikkei_dict_clear(ArikkeiDict *dict);
-unsigned int arikkei_dict_exists(ArikkeiDict *dict, const void *key);
+unsigned int arikkei_dict_exists_pval(ArikkeiDict *dict, const void *key);
 const void *arikkei_dict_lookup(ArikkeiDict *dict, const void *key);
 const void *arikkei_dict_lookup_pval(ArikkeiDict *dict, const void *key);
 /*
