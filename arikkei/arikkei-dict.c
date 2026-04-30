@@ -79,7 +79,7 @@ dict_val_ptr(ArikkeiDict *dict, unsigned int pos)
 static void
 set_entry(ArikkeiDict *dict, unsigned int pos, unsigned int next, const void *key, const void *val, unsigned int replace)
 {
-	ArikkeiDictEntry *entry = ENTRY(dict, pos);
+	ArikkeiDictEntry *entry = dict_entry_ptr(dict, pos);
 	entry->next = next;
 	if (key) {
 		void *key_ptr = (char *) entry + dict->key_offset;
@@ -97,6 +97,17 @@ set_entry(ArikkeiDict *dict, unsigned int pos, unsigned int next, const void *ke
 	} else {
 		memcpy(val_ptr, val, dict->val_size);
 	}
+}
+
+static inline void
+clear_entry(ArikkeiDict *dict, ArikkeiDictEntry *entry)
+{
+		if (dict->free_key) {
+			dict->free_key(key_ptr(dict, entry));
+		}
+		if (dict->free_value) {
+			dict->free_value(val_ptr(dict, entry));
+		}
 }
 
 static ArikkeiDictEntry *
@@ -129,97 +140,80 @@ arikkei_dict_setup_full (ArikkeiDict *dict, unsigned int hashsize,
 	dict->entries = allocate_entries(dict->size, dict->root_size, dict->entry_size);
 
 	dict->free = dict->root_size;
-	dict->_hash = hash;
-	dict->_equal = equal;
+	dict->hash = hash;
+	dict->equal = equal;
 }
 
 static void
-dict_reallocate (ArikkeiDict *dict, unsigned int hash_size)
+dict_reallocate (ArikkeiDict *dict, unsigned int new_root_size)
 {
-	ArikkeiDictEntry *entries;
-	unsigned int size, next_free;
-	size = 3 * hash_size;
-
-	fprintf(stdout, "Reallocate: %u -> %u, %u -> %u\n", dict->root_size, hash_size, dict->size, size);
-
-	entries =  allocate_entries(size, hash_size, dict->entry_size);
-
-	next_free = hash_size;
-	for (unsigned int i = 0; i < dict->root_size; i++) {
+	unsigned int new_size = 3 * new_root_size;
+	ArikkeiDictEntry *new_entries =  allocate_entries(new_size, new_root_size, dict->entry_size);
+	unsigned int new_free = new_root_size;
+	for (unsigned int hval = 0; hval < dict->root_size; hval++) {
 		// Skip if root is empty
-		if (ENTRY(dict, i)->next == EMPTY) continue;
-		unsigned int pos = i;
+		ArikkeiDictEntry *root_entry = dict_entry_ptr(dict, hval);
+		if(root_entry->next == EMPTY) continue;
+		unsigned int pos = hval;
 		do {
-			unsigned int hval = dict->_hash(dict_key_ptr(dict, pos)) % hash_size;
-			if (entries[hval].next == EMPTY) {
+			ArikkeiDictEntry *entry = dict_entry_ptr(dict, pos);
+			unsigned int new_hval = dict->hash(key_ptr(dict, entry)) % new_root_size;
+			if (new_entries[new_hval].next == EMPTY) {
 				// Add new root
-				memcpy(&entries[hval], &dict->entries[pos], dict->entry_size);
-				entries[hval].next = END;
+				memcpy(entry_ptr(dict, new_entries, new_hval), dict_entry_ptr(dict, pos), dict->entry_size);
+				new_entries[new_hval].next = END;
 			} else {
-				unsigned int next = next_free;
-				next_free = entries[next_free].next;
-				memcpy(&entries[next], &dict->entries[pos], dict->entry_size);
-				entries[next].next = entries[hval].next;
-				entries[hval].next = next;
+				unsigned int next = new_free;
+				new_free = new_entries[new_free].next;
+				memcpy(entry_ptr(dict, new_entries, next), dict_entry_ptr(dict, pos), dict->entry_size);
+				new_entries[next].next = new_entries[new_hval].next;
+				new_entries[new_hval].next = next;
 			}
-			pos = dict->entries[pos].next;
+			pos = entry->next;
 		} while (pos != END);
 	}
 	free (dict->entries);
-	dict->entries = entries;
-	dict->root_size = hash_size;
-	dict->size = size;
-	dict->free = next_free;
-}
-
-void
-arikkei_dict_setup_string (ArikkeiDict *dict, unsigned int hashsize)
-{
-	arikkei_dict_setup_full (dict, hashsize, arikkei_string_hash, arikkei_string_equal);
-}
-
-void
-arikkei_dict_setup_pointer (ArikkeiDict *dict, unsigned int hashsize)
-{
-	arikkei_dict_setup_full (dict, hashsize, arikkei_pointer_hash, arikkei_pointer_equal);
-}
-
-void
-arikkei_dict_setup_int32 (ArikkeiDict *dict, unsigned int hashsize)
-{
-	arikkei_dict_setup_full (dict, hashsize, arikkei_int32_hash, arikkei_int32_equal);
-}
-
-void
-arikkei_dict_setup_int64 (ArikkeiDict *dict, unsigned int hashsize)
-{
-	arikkei_dict_setup_full (dict, hashsize, arikkei_int64_hash, arikkei_int64_equal);
+	dict->entries = new_entries;
+	dict->root_size = new_root_size;
+	dict->size = new_size;
+	dict->free = new_free;
 }
 
 void
 arikkei_dict_release (ArikkeiDict *dict)
 {
+	for (unsigned int i = 0; i < dict->root_size; i++) {
+		ArikkeiDictEntry *root_entry = dict_entry_ptr(dict, i);
+		if (root_entry->next == EMPTY) continue;
+		clear_entry(dict, root_entry);
+		unsigned int pos = root_entry->next;
+		while (pos != END) {
+			ArikkeiDictEntry *entry = dict_entry_ptr(dict, pos);
+			clear_entry(dict, entry);
+			pos = entry->next;
+		}
+	}
 	free (dict->entries);
 }
 
 void
 arikkei_dict_insert(ArikkeiDict *dict, const void *key, const void *val)
 {
-	unsigned int pos = dict->_hash(key) % dict->root_size;
+	unsigned int pos = dict->hash(key) % dict->root_size;
 	ArikkeiDictEntry *root_entry = dict_entry_ptr(dict, pos);
 	if(root_entry->next == EMPTY) {
 		set_entry(dict, pos, END, key, val, 0);
 		return;
 	}
-	if (dict->_equal(key, key_ptr(dict, root_entry))) {
-		set_entry(dict, pos, root_entry->next, key, val, 1);
+	if (dict->equal(key, key_ptr(dict, root_entry))) {
+		set_entry(dict, pos, root_entry->next, NULL, val, 1);
 		return;
 	}
 	pos = root_entry->next;
 	while (pos != END) {
 		ArikkeiDictEntry *entry = dict_entry_ptr(dict, pos);
-		if (dict->_equal(key, key_ptr(dict, entry))) {
-			set_entry(dict, pos, entry->next, key, val, 1);
+		if (dict->equal(key, key_ptr(dict, entry))) {
+			set_entry(dict, pos, entry->next, NULL, val, 1);
 			return;
 		}
 		pos = entry->next;
@@ -239,22 +233,17 @@ arikkei_dict_insert(ArikkeiDict *dict, const void *key, const void *val)
 unsigned int
 arikkei_dict_remove(ArikkeiDict *dict, const void *key)
 {
-	unsigned int root = dict->_hash(key) % dict->root_size;
+	unsigned int root = dict->hash(key) % dict->root_size;
 	ArikkeiDictEntry *root_entry = dict_entry_ptr(dict, root);
 	if (root_entry->next == EMPTY) return 0;
-	if (dict->_equal (key, key_ptr(dict, root_entry))) {
+	if (dict->equal (key, key_ptr(dict, root_entry))) {
 		/* Have to remove root key */
-		if (dict->free_key) {
-			dict->free_key(key_ptr(dict, root_entry));
-		}
-		if (dict->free_value) {
-			dict->free_value(val_ptr(dict, root_entry));
-		}
+		clear_entry(dict, root_entry);
 		/* Move next key to root position */
 		if (root_entry->next != END) {
 			int pos = root_entry->next;
 			ArikkeiDictEntry *entry = dict_entry_ptr(dict, pos);
-			*root_entry = *entry;
+			memcpy(root_entry, entry, dict->entry_size);
 			/* Add old entry to the free list */
 			entry->next = dict->free;
 			dict->free = pos;
@@ -267,13 +256,8 @@ arikkei_dict_remove(ArikkeiDict *dict, const void *key)
 	int pos = root_entry->next;
 	while (pos != END) {
 		ArikkeiDictEntry *entry = dict_entry_ptr(dict, pos);
-		if (dict->_equal (key, key_ptr(dict, entry))) {
-			if (dict->free_key) {
-				dict->free_key(key_ptr(dict, entry));
-			}
-			if (dict->free_value) {
-				dict->free_value(val_ptr(dict, entry));
-			}
+		if (dict->equal (key, key_ptr(dict, entry))) {
+			clear_entry(dict, entry);
 			prev_entry->next = entry->next;
 			entry->next = dict->free;
 			dict->free = pos;
@@ -288,29 +272,42 @@ arikkei_dict_remove(ArikkeiDict *dict, const void *key)
 void
 arikkei_dict_clear (ArikkeiDict *dict)
 {
-	unsigned int i;
-	for (i = 0; i < dict->root_size; i++) dict->entries[i].next = EMPTY;
-	for (i = dict->root_size; i < dict->size - 1; i++) dict->entries[i].next = i + 1;
-	dict->entries[dict->size - 1].next = END;
+	for (unsigned int i = 0; i < dict->root_size; i++) {
+		ArikkeiDictEntry *root_entry = dict_entry_ptr(dict, i);
+		if (root_entry->next == EMPTY) continue;
+		clear_entry(dict, root_entry);
+		unsigned int pos = root_entry->next;
+		root_entry->next = EMPTY;
+		while (pos != END) {
+			ArikkeiDictEntry *entry = dict_entry_ptr(dict, pos);
+			clear_entry(dict, entry);
+			pos = entry->next;
+		}
+	}
+	for (unsigned int i = dict->root_size; i < dict->size - 1; i++) {
+		dict_entry_ptr(dict, i)->next = i + 1;
+	}
+	dict_entry_ptr(dict, dict->size - 1)->next = END;
 	dict->free = dict->root_size;
 }
 
 unsigned int
 arikkei_dict_exists_pval (ArikkeiDict *dict, const void *key)
 {
+	unsigned int val = ARIKKEI_POINTER_TO_INT(key);
 	return arikkei_dict_lookup(dict, &key) != NULL;
 }
 
 const void *
 arikkei_dict_lookup (ArikkeiDict *dict, const void *key)
 {
-	unsigned int pos = dict->_hash(key) % dict->root_size;
+	unsigned int pos = dict->hash(key) % dict->root_size;
 	ArikkeiDictEntry *entry = dict_entry_ptr(dict, pos);
 	if (entry->next == EMPTY) return NULL;
-	if (dict->_equal (key, key_ptr(dict, entry))) return val_ptr(dict, entry);
+	if (dict->equal (key, key_ptr(dict, entry))) return val_ptr(dict, entry);
 	for (pos = entry->next; pos != END; pos = entry->next) {
 		entry = dict_entry_ptr(dict, pos);
-		if (dict->_equal (key, key_ptr(dict, entry))) return val_ptr(dict, entry);
+		if (dict->equal (key, key_ptr(dict, entry))) return val_ptr(dict, entry);
 	}
 	return NULL;
 }
@@ -318,18 +315,20 @@ arikkei_dict_lookup (ArikkeiDict *dict, const void *key)
 const void *
 arikkei_dict_lookup_pval (ArikkeiDict *dict, const void *key)
 {
-	return arikkei_dict_lookup(dict, &key);
+	void **val = (void **) arikkei_dict_lookup(dict, &key);
+	return (val) ? *val : NULL;
 }
 
 const void *
-arikkei_dict_lookup_foreign (ArikkeiDict *dict, const void *foreign_key, unsigned int (*hash) (const void *key), unsigned int (*equal) (const void *lhs, const void *rhs))
+arikkei_dict_lookup_foreign (ArikkeiDict *dict, const void *foreign_key, unsigned int hash, unsigned int (*equal) (const void *lhs, const void *rhs))
 {
 	if (!foreign_key) return NULL;
-	unsigned int pos = hash(foreign_key) % dict->root_size;
+	unsigned int pos = hash % dict->root_size;
 	if (dict_entry_ptr(dict, pos)->next == EMPTY) return NULL;
 	do {
-		if (equal (foreign_key, dict_key_ptr(dict, pos))) return dict_val_ptr(dict, pos);
-		pos = dict->entries[pos].next;
+		ArikkeiDictEntry *entry = dict_entry_ptr(dict, pos);
+		if (equal (foreign_key, key_ptr(dict, entry))) return val_ptr(dict, entry);
+		pos = entry->next;
 	} while (pos != END);
 	return NULL;
 }
@@ -337,13 +336,14 @@ arikkei_dict_lookup_foreign (ArikkeiDict *dict, const void *foreign_key, unsigne
 unsigned int
 arikkei_dict_forall (ArikkeiDict *dict, unsigned int (* forall) (const void *, const void *, void *), void *data)
 {
-	unsigned int i, pos;
-	for (i = 0; i < dict->root_size; i++) {
-		if (ENTRY_IS_EMPTY(&dict->entries[i])) continue;
-		pos = i;
+	for (unsigned int i = 0; i < dict->root_size; i++) {
+		ArikkeiDictEntry *entry = dict_entry_ptr(dict, i);
+		if (entry->next == EMPTY) continue;
+		unsigned int pos = i;
 		do {
-			if (!forall (dict->entries[pos].key, dict->entries[pos].val, data)) return 0;
-			pos = dict->entries[pos].next;
+			entry = dict_entry_ptr(dict, pos);
+			if (!forall (key_ptr(dict, entry), val_ptr(dict, entry), data)) return 0;
+			pos = entry->next;
 		} while (pos != END);
 	}
 	return 1;
@@ -352,41 +352,72 @@ arikkei_dict_forall (ArikkeiDict *dict, unsigned int (* forall) (const void *, c
 unsigned int
 arikkei_dict_remove_all (ArikkeiDict *dict, unsigned int (*remove) (const void *, const void *, void *), void *data)
 {
-	unsigned int hash, n_removed;
-	n_removed = 0;
-	for (hash = 0; hash < dict->root_size; hash++) {
-		if (ENTRY_IS_EMPTY(&dict->entries[hash])) continue;
-		if (remove (dict->entries[hash].key, dict->entries[hash].val, data)) {
+	unsigned int n_removed = 0;
+	for (unsigned int hval = 0; hval < dict->root_size; hval++) {
+		ArikkeiDictEntry *root_entry = dict_entry_ptr(dict, hval);
+		if (root_entry->next == EMPTY) continue;
+		unsigned int pos = root_entry->next;
+		ArikkeiDictEntry *prev;
+		if (remove(key_ptr(dict, root_entry), val_ptr(dict, root_entry), data)) {
 			/* Remove root entry */
-			if (dict->entries[hash].next != END) {
-				int pos;
-				pos = dict->entries[hash].next;
-				dict->entries[hash] = dict->entries[pos];
-				dict->entries[pos].next = dict->free;
-				dict->free = pos;
-			} else {
-				dict->entries[hash].next = EMPTY;
-			}
+			clear_entry(dict, root_entry);
+			root_entry->next = EMPTY;
 			n_removed += 1;
+			prev = NULL;
 		} else {
-			int pos, prev;
-			prev = hash;
-			pos = dict->entries[hash].next;
-			while (pos) {
-				if (remove (dict->entries[pos].key, dict->entries[pos].val, data)) {
-					dict->entries[prev].next = dict->entries[pos].next;
-					dict->entries[pos].next = dict->free;
+			prev = root_entry;
+		}
+		while (pos != END) {
+			ArikkeiDictEntry *entry = dict_entry_ptr(dict, pos);
+			unsigned int next = entry->next;
+			if (remove(key_ptr(dict, entry), val_ptr(dict, entry), data)) {
+				/* Remove this entry */
+				clear_entry(dict, entry);
+				entry->next = dict->free;
+				dict->free = pos;
+				if (prev) prev->next = next;
+				n_removed += 1;
+			} else {
+				/* Keep this entry */
+				if (!prev) {
+					/* Move to root */
+					memcpy(root_entry, entry, dict->entry_size);
+					prev = root_entry;
+					entry->next = dict->free;
 					dict->free = pos;
-					n_removed += 1;
 				} else {
-					prev = pos;
-					pos = dict->entries[pos].next;
+					prev = entry;
 				}
 			}
-
+			pos = next;
 		}
 	}
 	return n_removed;
+}
+
+void
+arikkei_dict_get_stats (ArikkeiDict *dict, unsigned int *n_entries, unsigned int *n_root, unsigned int *longest_chain, unsigned int *n_free)
+{
+	*n_entries = *n_root = *longest_chain = 0;
+	for (unsigned int i = 0; i < dict->root_size; i++) {
+		ArikkeiDictEntry *entry = dict_entry_ptr(dict, i);
+		if (entry->next == EMPTY) continue;
+		*n_entries += 1;
+		*n_root += 1;
+		unsigned int chain_length = 0;
+		unsigned int pos = entry->next;
+		while (pos != END) {
+			pos = dict_entry_ptr(dict, pos)->next;
+			*n_entries += 1;
+			chain_length += 1;
+		};
+		if (chain_length > *longest_chain) *longest_chain = chain_length;
+	}
+	unsigned int pos = dict->free;
+	while (pos != END) {
+		*n_free += 1;
+		pos = dict_entry_ptr(dict, pos)->next;
+	}
 }
 
 unsigned int
@@ -454,21 +485,22 @@ arikkei_int64_equal (const void *l, const void *r)
 	return *((const uint64_t *) l) == *((const uint64_t *) r);
 }
 
-unsigned int
+uint32_t
 arikkei_memory_hash (const void *data, unsigned int size)
 {
-	const uint8_t *p = *((const uint8_t **) data);
-	unsigned int hval = *p;
-	for (unsigned int i = 1; i < size; i++) {
-		hval = (hval << 5) - hval + p[i];
+	const uint8_t *p = (const uint8_t *) data;
+	// FNV 1a
+	uint32_t hval = 2166136261;
+	for (unsigned int i = 0; i < size; i++) {
+		hval = (hval ^ p[i]) * 16777619;
 	}
 	return hval;
 }
 
 unsigned int
-arikkei_memory_equal (const void *l, const void *r, unsigned int size)
+arikkei_memory_equal (const void *lhs, const void *rhs, unsigned int size)
 {
-	return !memcmp (l, r, size);
+	return !memcmp (lhs, rhs, size);
 }
 
 
