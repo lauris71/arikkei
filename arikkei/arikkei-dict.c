@@ -30,6 +30,7 @@ struct _ArikkeiDictEntry {
 	uint32_t filler;
 	uint8_t key[8];
 	uint8_t val[8];
+	uint64_t filler2;
 };
 
 static ArikkeiDictEntry *
@@ -113,7 +114,7 @@ clear_entry(ArikkeiDict *dict, ArikkeiDictEntry *entry)
 static ArikkeiDictEntry *
 allocate_entries(unsigned int size, unsigned int root_size, unsigned int entry_size)
 {
-	ArikkeiDictEntry *entries = (ArikkeiDictEntry *) malloc (size * entry_size);
+	ArikkeiDictEntry *entries = (ArikkeiDictEntry *) aligned_alloc (16, size * entry_size);
 	memset (entries, 0, size * entry_size);
 	for (unsigned int i = root_size; i < size - 1; i++) ((ArikkeiDictEntry *) ((char *) entries + i * entry_size))->next = i + 1;
 	((ArikkeiDictEntry *) ((char *) entries + (size - 1) * entry_size))->next = END;
@@ -125,18 +126,32 @@ arikkei_dict_setup_full (ArikkeiDict *dict, unsigned int hashsize,
 			 unsigned int (* hash) (const void *),
 			 unsigned int (* equal) (const void *, const void *))
 {
-	unsigned int i;
+	arikkei_dict_setup_sizes(dict, hashsize, 8, 8, hash, equal);
+}
+
+static unsigned int
+align16 (unsigned int v)
+{
+	return (v + 15) & ~(unsigned int) 15;
+}
+
+void
+arikkei_dict_setup_sizes (ArikkeiDict *dict, unsigned int hashsize,
+			  unsigned int key_size, unsigned int val_size,
+			  unsigned int (* hash) (const void *),
+			  unsigned int (* equal) (const void *, const void *))
+{
 	if (hashsize < 3) hashsize = 3;
 
 	memset(dict, 0, sizeof(ArikkeiDict));
 
 	dict->root_size = hashsize;
 	dict->size = 3 * hashsize;
-	dict->entry_size = sizeof(ArikkeiDictEntry);
-	dict->key_offset = ARIKKEI_OFFSET(ArikkeiDictEntry, key);
-	dict->key_size = 8;
-	dict->val_offset = ARIKKEI_OFFSET(ArikkeiDictEntry, val);
-	dict->val_size = 8;
+	dict->key_offset = 16;
+	dict->key_size = key_size;
+	dict->val_offset = align16(dict->key_offset + key_size);
+	dict->val_size = val_size;
+	dict->entry_size = align16(dict->val_offset + val_size);
 	dict->entries = allocate_entries(dict->size, dict->root_size, dict->entry_size);
 
 	dict->free = dict->root_size;
@@ -158,16 +173,18 @@ dict_reallocate (ArikkeiDict *dict, unsigned int new_root_size)
 		do {
 			ArikkeiDictEntry *entry = dict_entry_ptr(dict, pos);
 			unsigned int new_hval = dict->hash(key_ptr(dict, entry)) % new_root_size;
-			if (new_entries[new_hval].next == EMPTY) {
+			ArikkeiDictEntry *new_root_entry = entry_ptr(dict, new_entries, new_hval);
+			if (new_root_entry->next == EMPTY) {
 				// Add new root
-				memcpy(entry_ptr(dict, new_entries, new_hval), dict_entry_ptr(dict, pos), dict->entry_size);
-				new_entries[new_hval].next = END;
+				memcpy(new_root_entry, entry, dict->entry_size);
+				new_root_entry->next = END;
 			} else {
-				unsigned int next = new_free;
-				new_free = new_entries[new_free].next;
-				memcpy(entry_ptr(dict, new_entries, next), dict_entry_ptr(dict, pos), dict->entry_size);
-				new_entries[next].next = new_entries[new_hval].next;
-				new_entries[new_hval].next = next;
+				unsigned int new_next = new_root_entry->next;
+				new_root_entry->next = new_free;
+				ArikkeiDictEntry *new_entry = entry_ptr(dict, new_entries, new_free);
+				new_free = new_entry->next;
+				memcpy(new_entry, entry, dict->entry_size);
+				new_entry->next = new_next;
 			}
 			pos = entry->next;
 		} while (pos != END);
@@ -292,9 +309,14 @@ arikkei_dict_clear (ArikkeiDict *dict)
 }
 
 unsigned int
+arikkei_dict_exists(ArikkeiDict *dict, const void *key)
+{
+	return arikkei_dict_lookup(dict, key) != NULL;
+}
+
+unsigned int
 arikkei_dict_exists_pval (ArikkeiDict *dict, const void *key)
 {
-	unsigned int val = ARIKKEI_POINTER_TO_INT(key);
 	return arikkei_dict_lookup(dict, &key) != NULL;
 }
 

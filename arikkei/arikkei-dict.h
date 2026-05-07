@@ -50,6 +50,10 @@ struct _ArikkeiDict {
 void arikkei_dict_setup_full (ArikkeiDict *dict, unsigned int hashsize,
 			      unsigned int (*hash) (const void *key),
 			      unsigned int (*equal) (const void *lhs, const void *rhs));
+void arikkei_dict_setup_sizes (ArikkeiDict *dict, unsigned int hashsize,
+			       unsigned int key_size, unsigned int val_size,
+			       unsigned int (*hash) (const void *key),
+			       unsigned int (*equal) (const void *lhs, const void *rhs));
 void arikkei_dict_release (ArikkeiDict *dict);
 
 /**
@@ -89,6 +93,7 @@ arikkei_dict_remove_pval (ArikkeiDict *dict, const void *key)
 }
 
 void arikkei_dict_clear(ArikkeiDict *dict);
+unsigned int arikkei_dict_exists(ArikkeiDict *dict, const void *key);
 unsigned int arikkei_dict_exists_pval(ArikkeiDict *dict, const void *key);
 const void *arikkei_dict_lookup(ArikkeiDict *dict, const void *key);
 const void *arikkei_dict_lookup_pval(ArikkeiDict *dict, const void *key);
