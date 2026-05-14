@@ -23,6 +23,8 @@
 #ifdef _WIN32
 #define aligned_alloc(a,s) _aligned_malloc(s,a)
 #define aligned_free(p) _aligned_free(p)
+#else
+#define aligned_free(p) free(p)
 #endif
 
 #define EMPTY 0
