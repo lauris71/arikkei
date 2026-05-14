@@ -21,7 +21,8 @@
 #include "arikkei-utils.h"
 
 #ifdef _WIN32
-#define aligned_alloc _aligned_malloc
+#define aligned_alloc(a,s) _aligned_malloc(s,a)
+#define aligned_free(p) _aligned_free(p)
 #endif
 
 #define EMPTY 0
@@ -193,7 +194,7 @@ dict_reallocate (ArikkeiDict *dict, unsigned int new_root_size)
 			pos = entry->next;
 		} while (pos != END);
 	}
-	free (dict->entries);
+	aligned_free (dict->entries);
 	dict->entries = new_entries;
 	dict->root_size = new_root_size;
 	dict->size = new_size;
@@ -214,7 +215,7 @@ arikkei_dict_release (ArikkeiDict *dict)
 			pos = entry->next;
 		}
 	}
-	free (dict->entries);
+	aligned_free (dict->entries);
 }
 
 void
