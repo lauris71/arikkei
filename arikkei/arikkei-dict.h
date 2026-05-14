@@ -32,7 +32,7 @@ struct _ArikkeiDict {
 	uint16_t val_size;
 	ArikkeiDictEntry *entries;
 	unsigned int free;
-	unsigned int (*hash) (const void *data);
+	unsigned int (*hash) (const void *key);
 	/**
 	 * @brief Compare two keys for equality
 	 * 

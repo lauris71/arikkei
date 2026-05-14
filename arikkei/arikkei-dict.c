@@ -20,6 +20,10 @@
 #include "arikkei-dict.h"
 #include "arikkei-utils.h"
 
+#ifdef _WIN32
+#define aligned_alloc _aligned_malloc
+#endif
+
 #define EMPTY 0
 #define END 1
 
