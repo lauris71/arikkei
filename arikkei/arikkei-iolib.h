@@ -20,6 +20,14 @@
 extern "C" {
 #endif
 
+#ifdef _WIN32
+#define arikkei_aligned_alloc(a,s) _aligned_malloc(s,a)
+#define arikkei_aligned_free(p) _aligned_free(p)
+#else
+#define arikkei_aligned_alloc(a,s) aligned_alloc(a,s)
+#define arikkei_aligned_free(p) free(p)
+#endif
+
 /* All file names are UTF-8 */
 const uint8_t *arikkei_mmap (const uint8_t *file_name, uint64_t *map_size);
 void arikkei_munmap (const uint8_t *map, uint64_t map_size);

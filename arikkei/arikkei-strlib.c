@@ -62,6 +62,31 @@ arikkei_strncpy_aon (uint8_t *d, uint64_t d_len, const uint8_t *s)
 }
 
 uint64_t
+arikkei_strncpy_shorten (uint8_t *d, uint64_t d_len, const uint8_t *s)
+{
+	uint64_t len = (s) ? strlen((const char *) s) : 0;
+	if (d && (d_len)) {
+		if (d_len > len) {
+			return arikkei_strncpy(d, d_len, s);
+		} else if (d_len < 4) {
+			arikkei_strncpy(d, d_len, (const uint8_t *) "...");
+		} else {
+			uint64_t p0 = 0;
+			uint64_t l0 = (d_len - 1 - 3) / 2;
+			uint64_t p1 = l0;
+			uint64_t l1 = 3;
+			uint64_t p2 = p1 + l1;
+			uint64_t l2 = d_len - 1 - p2;
+			arikkei_memcpy(d, l0, s, l0);
+			arikkei_memcpy(d + p1, l1, (const uint8_t *) "...", l1);
+			arikkei_memcpy(d + p2, l2, s + len - l2, l2);
+			d[d_len - 1] = 0;
+		}
+	}
+	return len;
+}
+
+uint64_t
 arikkei_strcpy_join (uint8_t *d, uint64_t d_len,
 	const uint8_t *srcs[], unsigned int n_srcs, const int64_t lens[],
 	const uint8_t *sep, int64_t sep_len)
@@ -499,6 +524,89 @@ arikkei_utf8_strnlen_chars (const uint8_t *s, uint64_t s_len)
 		uval = arikkei_utf8_get_unicode(&s, e - s);
 	}
 	return len;
+}
+
+uint64_t
+arikkei_utf8_strlen_bytes (const uint8_t *s)
+{
+	if (!s) return 0;
+	const uint8_t *p = s;
+	int uval = arikkei_utf8_get_unicode(&p, 4);
+	while (uval > 0) {
+		uval = arikkei_utf8_get_unicode(&p, 4);
+	}
+	return p - s;
+}
+
+uint64_t
+arikkei_utf8_strnlen_bytes (const uint8_t *s, uint64_t s_len)
+{
+	if (!s || !s_len) return 0;
+	const uint8_t *p = s;
+	uint64_t len = 0;
+	const uint8_t *e = p + s_len;
+	int uval = arikkei_utf8_get_unicode(&p, e - p);
+	while (uval > 0) {
+		uval = arikkei_utf8_get_unicode(&p, e - p);
+	}
+	return p - s;
+}
+
+const uint8_t *
+arikkei_utf8_substr_chars (const uint8_t *s, int64_t start, uint64_t length, uint64_t *len_bytes)
+{
+	if (!s) {
+		*len_bytes = 0;
+		return s;
+	};
+	return arikkei_utf8_substrn_chars(s, strlen((const char *) s), start, length, len_bytes);
+}
+
+const uint8_t *
+arikkei_utf8_substrn_chars (const uint8_t *s, uint64_t s_len, int64_t start, uint64_t length, uint64_t *len_bytes)
+{
+	if (!s || !s_len) {
+		*len_bytes = 0;
+		return s;
+	};
+	const uint8_t *p = s;
+	const uint8_t *e = p + s_len;
+	/* Find length in unicode characters */
+	int64_t c_len = 0;
+	int uval = arikkei_utf8_get_unicode(&p, e - p);
+	while (uval > 0) {
+		c_len += 1;
+		uval = arikkei_utf8_get_unicode(&p, e - p);
+	}
+	if (start >= 0) {
+		if (start >= c_len) {
+			*len_bytes = 0;
+			return s;
+		}
+	} else {
+		start = -start;
+		if (start > c_len) start = c_len;
+		start = c_len - start;
+	}
+	if ((start + length) > c_len) length = c_len - start;
+	p = s;
+	e = p + s_len;
+	/* Iterate over unicode characters and mark end and start */
+	const uint8_t *start_p = s;
+	const uint8_t *end_p = s;
+	int64_t c_pos = 0;
+	uval = arikkei_utf8_get_unicode(&p, e - p);
+	while (uval > 0) {
+		c_pos += 1;
+		if (c_pos == start) start_p = p;
+		if (c_pos == (start + length)) {
+			end_p = p;
+			break;
+		}
+		uval = arikkei_utf8_get_unicode(&p, e - p);
+	}
+	*len_bytes = end_p - start_p;
+	return start_p;
 }
 
 uint64_t

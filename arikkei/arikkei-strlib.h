@@ -33,6 +33,8 @@ uint64_t arikkei_memcpy_str (uint8_t *d, uint64_t d_len, const uint8_t *s);
 uint64_t arikkei_strncpy (uint8_t *d, uint64_t d_len, const uint8_t *s);
 /* All or nothing - only copies data if there is room for everything */
 uint64_t arikkei_strncpy_aon (uint8_t *d, uint64_t d_len, const uint8_t *s);
+/* Copies and shortens string (head...tail) */
+uint64_t arikkei_strncpy_shorten (uint8_t *d, uint64_t d_len, const uint8_t *s);
 
 /*
  * If lens is NULL or lens[i] <= 0 or sep_len < 0 corresponding string is assumed to be zero-terminated
@@ -107,6 +109,13 @@ uint16_t *arikkei_utf16_strndup (const uint16_t *s, uint64_t s_len);
 /* NULL is treated as zero-length string, error as string-terminator */
 uint64_t arikkei_utf8_strlen_chars (const uint8_t *s);
 uint64_t arikkei_utf8_strnlen_chars (const uint8_t *s, uint64_t s_len);
+/* Return the length of the longest valid string that fits into s_len */
+uint64_t arikkei_utf8_strlen_bytes (const uint8_t *s);
+uint64_t arikkei_utf8_strnlen_bytes (const uint8_t *s, uint64_t s_len);
+/* Negative length means length from the end */
+const uint8_t *arikkei_utf8_substr_chars (const uint8_t *s, int64_t start, uint64_t length, uint64_t *len_bytes);
+const uint8_t *arikkei_utf8_substrn_chars (const uint8_t *s, uint64_t s_len, int64_t start, uint64_t length, uint64_t *len_bytes);
+
 uint64_t arikkei_utf8_strlen_utf16 (const uint8_t *s);
 uint64_t arikkei_utf8_strnlen_utf16 (const uint8_t *s, uint64_t s_len);
 uint64_t arikkei_utf16_strlen_chars (const uint16_t *s);
