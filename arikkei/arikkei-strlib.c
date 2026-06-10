@@ -872,7 +872,7 @@ arikkei_utf16_strndup (const uint16_t *s, uint64_t s_len)
 	}
 	len += 1;
 	uint16_t *d = (uint16_t *) malloc(len * 2);
-	arikkei_utf16_strncpy(d, s, s_len);
+	arikkei_utf16_strncpy(d, s, len);
 	return d;
 }
 

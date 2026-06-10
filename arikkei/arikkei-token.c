@@ -134,7 +134,7 @@ arikkei_token_tokenize(ArikkeiToken *token, ArikkeiToken *tokens, int maxtokens,
     const uint8_t *p;
     uint64_t s;
     int ntokens;
-    if (arikkei_token_is_empty(token)) return 0;
+    if (!arikkei_token_is_valid(token)) return 0;
     ntokens = 0;
     p = token->cdata;
     s = 0;
@@ -157,15 +157,16 @@ arikkei_token_tokenize(ArikkeiToken *token, ArikkeiToken *tokens, int maxtokens,
 
 unsigned int
 arikkei_token_tokenize_ws(ArikkeiToken *token, ArikkeiToken *tokens, int maxtokens, const uint8_t *ws, unsigned int multi) {
-    uint64_t len, s;
-    int ntokens;
-    if (arikkei_token_is_empty(token)) return 0;
-    len = strlen((const char *) ws);
-    ntokens = 0;
-    s = 0;
-    while ((s < token->len) && (ntokens < maxtokens)) {
+    if (!arikkei_token_is_valid(token)) return 0;
+
+    uint64_t len = strlen((const char *) ws);
+
+    unsigned int n_tokens = 0;
+
+    uint64_t s = 0;
+    while (n_tokens < maxtokens) {
         uint64_t e;
-        if (ntokens != (maxtokens - 1)) {
+        if (n_tokens != (maxtokens - 1)) {
             e = s;
             while (e < token->len) {
                 uint64_t i;
@@ -178,7 +179,9 @@ arikkei_token_tokenize_ws(ArikkeiToken *token, ArikkeiToken *tokens, int maxtoke
         } else {
             e = token->len;
         }
-        arikkei_token_set_from_data(tokens + ntokens, token->cdata, s, e);
+        arikkei_token_set_from_data(tokens + n_tokens, token->cdata, s, e);
+        n_tokens += 1;
+        if (e == token->len) break;
         s = e + 1;
         if (multi) {
             while (s < token->len) {
@@ -190,9 +193,8 @@ arikkei_token_tokenize_ws(ArikkeiToken *token, ArikkeiToken *tokens, int maxtoke
                 s += 1;
             }
         }
-        ntokens += 1;
     }
-    return ntokens;
+    return n_tokens;
 }
 
 ArikkeiToken *
