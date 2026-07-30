@@ -14,6 +14,7 @@
  */
 
 #include <stdint.h>
+#include <string.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,17 +25,50 @@ extern "C" {
  * Destination can be NULL
  */
 
+ /**
+  * @brief Copies MIN(d_len, s_len) bytes from source to destination
+  * 
+  * The destination can be NULL, in that case nothing is copied but the length is still returned
+  * 
+  * @param d the destination buffer
+  * @param d_len the destination buffer length
+  * @param s the source buffer
+  * @param s_len the source buffer length
+  * @return s_len
+  */
 uint64_t arikkei_memcpy (uint8_t *d, uint64_t d_len, const uint8_t *s, uint64_t s_len);
-/* NULL is valid string */
-/* Does not terminate sequence with 0 */
-uint64_t arikkei_memcpy_str (uint8_t *d, uint64_t d_len, const uint8_t *s);
-/* Returns the number of content bytes (excluding the terminating 0) */
-/* Unless len is 0, terminating 0 is always written */
-uint64_t arikkei_strncpy (uint8_t *d, uint64_t d_len, const uint8_t *s);
-/* All or nothing - only copies data if there is room for everything */
-uint64_t arikkei_strncpy_aon (uint8_t *d, uint64_t d_len, const uint8_t *s);
-/* Copies and shortens string (head...tail) */
-uint64_t arikkei_strncpy_shorten (uint8_t *d, uint64_t d_len, const uint8_t *s);
+uint64_t arikkei_strcpy_len (uint8_t *d, uint64_t d_len, const uint8_t *s, uint64_t s_len);
+uint64_t arikkei_strcpy_len_aon (uint8_t *d, uint64_t d_len, const uint8_t *s, uint64_t s_len);
+uint64_t arikkei_strcpy_len_shorten (uint8_t *d, uint64_t d_len, const uint8_t *s, uint64_t s_len);
+
+static inline uint64_t
+arikkei_memcpy_str (uint8_t *d, uint64_t d_len, const uint8_t *s)
+{
+	uint64_t s_len = (s) ? strlen ((const char *) s) : 0;
+	arikkei_memcpy (d, d_len, s, s_len);
+	return s_len;
+}
+
+static inline uint64_t
+arikkei_strncpy (uint8_t *d, uint64_t d_len, const uint8_t *s)
+{
+	uint64_t s_len = (s) ? strlen ((const char *) s) : 0;
+	return arikkei_strcpy_len (d, d_len, s, s_len);
+}
+
+static inline uint64_t
+arikkei_strncpy_aon (uint8_t *d, uint64_t d_len, const uint8_t *s)
+{
+	uint64_t s_len = (s) ? strlen ((const char *) s) : 0;
+	return arikkei_strcpy_len_aon (d, d_len, s, s_len);
+}
+
+static inline uint64_t
+arikkei_strncpy_shorten (uint8_t *d, uint64_t d_len, const uint8_t *s)
+{
+	uint64_t s_len = (s) ? strlen ((const char *) s) : 0;
+	return arikkei_strcpy_len_shorten (d, d_len, s, s_len);
+}
 
 /*
  * If lens is NULL or lens[i] <= 0 or sep_len < 0 corresponding string is assumed to be zero-terminated
