@@ -15,6 +15,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,6 +30,7 @@ extern "C" {
 #endif
 
 /* All file names are UTF-8 */
+/* On failure arikkei_mmap returns NULL and sets map_size to 0 */
 const uint8_t *arikkei_mmap (const uint8_t *file_name, uint64_t *map_size);
 void arikkei_munmap (const uint8_t *map, uint64_t map_size);
 /* Frontend to open file with utf-8 name (only really needed for windows) */

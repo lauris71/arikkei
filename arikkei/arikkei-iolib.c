@@ -32,10 +32,8 @@
 #include <windows.h>
 #include <tchar.h>
 #include <stdio.h>
-#endif
-
 #include <sys/timeb.h>
-#ifndef _WIN32
+#else
 #include <sys/time.h>
 #include <time.h>
 #endif
@@ -55,21 +53,24 @@ static size_t total = 0;
 
 #ifdef _WIN32
 
-const unsigned char *
-arikkei_mmap (const unsigned char *filename, uint64_t *size)
+const uint8_t *
+arikkei_mmap (const uint8_t *file_name, uint64_t *map_size)
 {
 	uint16_t *ucs2filename;
 	unsigned char *cdata;
-	struct _stat st;
+	struct _stati64 st;
 	HANDLE fh, mh;
 
-	if (!filename || !*filename) return NULL;
+	*map_size = 0;
 
-	ucs2filename = arikkei_utf8_to_utf16_strdup (filename);
+	if (!file_name || !*file_name) return NULL;
 
-	if (_wstat (ucs2filename, &st)) {
+	ucs2filename = arikkei_utf8_to_utf16_strdup (file_name);
+	if (!ucs2filename) return NULL;
+
+	if (_wstati64 (ucs2filename, &st) || (st.st_size <= 0)) {
 		/* No such file */
-		/* fprintf (stderr, "arikkei_mmap: File %s not found or not regular file\n", filename); */
+		/* fprintf (stderr, "arikkei_mmap: File %s not found\n", (const char *) file_name); */
 		free (ucs2filename);
 		return NULL;
 	}
@@ -77,7 +78,7 @@ arikkei_mmap (const unsigned char *filename, uint64_t *size)
 	fh = CreateFile (ucs2filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (fh == INVALID_HANDLE_VALUE) {
 		/* Cannot open */
-		/* fprintf (stderr, "arikkei_mmap: File %s cannot be opened for reading\n", filename); */
+		/* fprintf (stderr, "arikkei_mmap: File %s cannot be opened for reading\n", (const char *) file_name); */
 		free (ucs2filename);
 		return NULL;
 	}
@@ -85,9 +86,8 @@ arikkei_mmap (const unsigned char *filename, uint64_t *size)
 	mh = CreateFileMapping (fh, NULL, PAGE_READONLY, 0, 0, NULL);
 	if (mh == NULL) {
 		/* Mapping failed */
-		/* fprintf (stderr, "arikkei_mmap: File %s cannot be mapped as %s\n", filename, mapname); */
 		DWORD ecode = GetLastError ();
-		fprintf (stderr, "arikkei_mmap: File %s cannot be mapped (Error %d)\n", filename, ecode);
+		fprintf (stderr, "arikkei_mmap: File %s cannot be mapped (Error %lu)\n", (const char *) file_name, (unsigned long) ecode);
 		CloseHandle (fh);
 		free (ucs2filename);
 		return NULL;
@@ -98,9 +98,9 @@ arikkei_mmap (const unsigned char *filename, uint64_t *size)
 #ifdef PRINT_MAPSIZE
 	if (!cdata) {
 		DWORD ecode = GetLastError ();
-		fprintf (stderr, "arikkei_mmap: Error %d\n", ecode);
+		fprintf (stderr, "arikkei_mmap: Error %lu\n", (unsigned long) ecode);
 	} else {
-		total += st.st_size;
+		total += (size_t) st.st_size;
 		fprintf (stderr, "MMap size+: %x\n", (unsigned int) total);
 	}
 #endif
@@ -109,19 +109,21 @@ arikkei_mmap (const unsigned char *filename, uint64_t *size)
 
 	free (ucs2filename);
 
-	*size = st.st_size;
+	if (!cdata) return NULL;
+
+	*map_size = (uint64_t) st.st_size;
 
 	return cdata;
 }
 
 void
-arikkei_munmap (const unsigned char *cdata, size_t size)
+arikkei_munmap (const uint8_t *map, uint64_t map_size)
 {
 	/* Release data */
-	UnmapViewOfFile (cdata);
+	UnmapViewOfFile (map);
 
 #ifdef PRINT_MAPSIZE
-	total -= size;
+	total -= (size_t) map_size;
 	fprintf (stderr, "MMap size-: %x\n", (unsigned int) total);
 #endif
 }
@@ -133,17 +135,21 @@ arikkei_mmap (const uint8_t *file_name, uint64_t *map_size)
 {
 	unsigned char *cdata;
 	struct stat st;
-	cdata = NULL;
-	if (!stat ((const char *) file_name, &st) && S_ISREG (st.st_mode) && (st.st_size > 8)) {
-		int fd;
-		fd = open ((const char *) file_name, O_RDONLY);
-		if (fd < 0) return NULL;
-		cdata = mmap (NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
-		close (fd);
-		if ((!cdata) || (cdata == (unsigned char *) -1)) return NULL;
-	}
+	int fd;
 
-	*map_size = st.st_size;
+	*map_size = 0;
+
+	if (!file_name || !*file_name) return NULL;
+
+	if (stat ((const char *) file_name, &st) || !S_ISREG (st.st_mode) || (st.st_size <= 0)) return NULL;
+
+	fd = open ((const char *) file_name, O_RDONLY);
+	if (fd < 0) return NULL;
+	cdata = mmap (NULL, (size_t) st.st_size, PROT_READ, MAP_SHARED, fd, 0);
+	close (fd);
+	if ((!cdata) || (cdata == (unsigned char *) -1)) return NULL;
+
+	*map_size = (uint64_t) st.st_size;
 
 	return cdata;
 }
@@ -161,16 +167,22 @@ FILE *
 arikkei_fopen (const uint8_t *file_name, const uint8_t *mode)
 {
 #ifdef _WIN32
-	unsigned short *ucs2filename, *ucs2mode;
+	uint16_t *ucs2filename, *ucs2mode;
 	FILE *fs;
-	if (!file_name || !*file_name) return NULL;
+	if (!file_name || !*file_name || !mode || !*mode) return NULL;
 	ucs2filename = arikkei_utf8_to_utf16_strdup (file_name);
 	ucs2mode = arikkei_utf8_to_utf16_strdup (mode);
+	if (!ucs2filename || !ucs2mode) {
+		free (ucs2filename);
+		free (ucs2mode);
+		return NULL;
+	}
 	fs = _wfopen (ucs2filename, ucs2mode);
 	free (ucs2filename);
 	free (ucs2mode);
 	return fs;
 #else
+	if (!file_name || !mode) return NULL;
 	return fopen ((const char *) file_name, (const char *) mode);
 #endif
 }
@@ -179,8 +191,8 @@ arikkei_fopen (const uint8_t *file_name, const uint8_t *mode)
 double
 arikkei_get_time (void)
 {
-	struct _timeb t;
-	_ftime (&t);
+	struct __timeb64 t;
+	_ftime64 (&t);
 	double dtval = (t.time + t.millitm / 1000.0);
 	return dtval;
 }
