@@ -188,6 +188,23 @@ uint64_t arikkei_utf8_strnlen_chars (const uint8_t *s, uint64_t s_len);
 /* Return the length of the longest valid string that fits into s_len */
 uint64_t arikkei_utf8_strlen_bytes (const uint8_t *s);
 uint64_t arikkei_utf8_strnlen_bytes (const uint8_t *s, uint64_t s_len);
+/* As strncpy versions but clip the copied string to valid utf8 character boundary */
+uint64_t arikkei_utf8_strncpy_len (uint8_t *d, uint64_t d_len, const uint8_t *s, uint64_t s_len);
+uint64_t arikkei_utf8_strncpy_len_shorten (uint8_t *d, uint64_t d_len, const uint8_t *s, uint64_t s_len);
+
+static inline uint64_t
+arikkei_utf8_strncpy (uint8_t *d, uint64_t d_len, const uint8_t *s)
+{
+	uint64_t s_len = (s) ? strlen ((const char *) s) : 0;
+	return arikkei_utf8_strncpy_len (d, d_len, s, s_len);
+}
+
+static inline uint64_t
+arikkei_utf8_strncpy_shorten (uint8_t *d, uint64_t d_len, const uint8_t *s)
+{
+	uint64_t s_len = (s) ? strlen ((const char *) s) : 0;
+	return arikkei_utf8_strncpy_len_shorten (d, d_len, s, s_len);
+}
 /* Negative length means length from the end */
 const uint8_t *arikkei_utf8_substr_chars (const uint8_t *s, int64_t start, uint64_t length, uint64_t *len_bytes);
 const uint8_t *arikkei_utf8_substrn_chars (const uint8_t *s, uint64_t s_len, int64_t start, uint64_t length, uint64_t *len_bytes);
