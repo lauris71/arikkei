@@ -32,7 +32,7 @@ arikkei_memcpy (uint8_t *d, uint64_t d_len, const uint8_t *s, uint64_t s_len)
 }
 
 uint64_t
-arikkei_strcpy_len (uint8_t *d, uint64_t d_len, const uint8_t *s, uint64_t s_len)
+arikkei_strncpy_len (uint8_t *d, uint64_t d_len, const uint8_t *s, uint64_t s_len)
 {
 	if (s == NULL) s_len = 0;
 	uint64_t len = arikkei_memcpy(d, d_len, s, s_len);
@@ -44,7 +44,7 @@ arikkei_strcpy_len (uint8_t *d, uint64_t d_len, const uint8_t *s, uint64_t s_len
 }
 
 uint64_t
-arikkei_strcpy_len_aon (uint8_t *d, uint64_t d_len, const uint8_t *s, uint64_t s_len)
+arikkei_strncpy_len_aon (uint8_t *d, uint64_t d_len, const uint8_t *s, uint64_t s_len)
 {
 	if (s == NULL) s_len = 0;
 	if (d && (d_len > s_len)) {
@@ -55,7 +55,7 @@ arikkei_strcpy_len_aon (uint8_t *d, uint64_t d_len, const uint8_t *s, uint64_t s
 }
 
 uint64_t
-arikkei_strcpy_len_shorten (uint8_t *d, uint64_t d_len, const uint8_t *s, uint64_t s_len)
+arikkei_strncpy_len_shorten (uint8_t *d, uint64_t d_len, const uint8_t *s, uint64_t s_len)
 {
 	if (s == NULL) s_len = 0;
 	if (d && d_len) {
@@ -63,7 +63,7 @@ arikkei_strcpy_len_shorten (uint8_t *d, uint64_t d_len, const uint8_t *s, uint64
 			arikkei_memcpy(d, d_len, s, s_len);
 			d[s_len] = 0;
 		} else if (d_len < 4) {
-			arikkei_strcpy_len(d, d_len, (const uint8_t *) "...", 3);
+			arikkei_strncpy_len(d, d_len, (const uint8_t *) "...", 3);
 		} else {
 			uint64_t l0 = (d_len - 1 - 3) / 2;
 			uint64_t p1 = l0;

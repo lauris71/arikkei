@@ -50,7 +50,7 @@ uint64_t arikkei_memcpy (uint8_t *d, uint64_t d_len, const uint8_t *s, uint64_t 
  * @param s_len the source buffer length
  * @return s_len
  */
-uint64_t arikkei_strcpy_len (uint8_t *d, uint64_t d_len, const uint8_t *s, uint64_t s_len);
+uint64_t arikkei_strncpy_len (uint8_t *d, uint64_t d_len, const uint8_t *s, uint64_t s_len);
 /**
  * @brief Copies string from source to destination if it fits
  * 
@@ -65,7 +65,7 @@ uint64_t arikkei_strcpy_len (uint8_t *d, uint64_t d_len, const uint8_t *s, uint6
  * @param s_len the source buffer length
  * @return s_len
  */
-uint64_t arikkei_strcpy_len_aon (uint8_t *d, uint64_t d_len, const uint8_t *s, uint64_t s_len);
+uint64_t arikkei_strncpy_len_aon (uint8_t *d, uint64_t d_len, const uint8_t *s, uint64_t s_len);
 /**
  * @brief Copies string from source to destination, shortening it if needed
  * 
@@ -81,7 +81,7 @@ uint64_t arikkei_strcpy_len_aon (uint8_t *d, uint64_t d_len, const uint8_t *s, u
  * @param s_len the source buffer length
  * @return s_len
  */
-uint64_t arikkei_strcpy_len_shorten (uint8_t *d, uint64_t d_len, const uint8_t *s, uint64_t s_len);
+uint64_t arikkei_strncpy_len_shorten (uint8_t *d, uint64_t d_len, const uint8_t *s, uint64_t s_len);
 
 static inline uint64_t
 arikkei_memcpy_str (uint8_t *d, uint64_t d_len, const uint8_t *s)
@@ -95,21 +95,21 @@ static inline uint64_t
 arikkei_strncpy (uint8_t *d, uint64_t d_len, const uint8_t *s)
 {
 	uint64_t s_len = (s) ? strlen ((const char *) s) : 0;
-	return arikkei_strcpy_len (d, d_len, s, s_len);
+	return arikkei_strncpy_len (d, d_len, s, s_len);
 }
 
 static inline uint64_t
 arikkei_strncpy_aon (uint8_t *d, uint64_t d_len, const uint8_t *s)
 {
 	uint64_t s_len = (s) ? strlen ((const char *) s) : 0;
-	return arikkei_strcpy_len_aon (d, d_len, s, s_len);
+	return arikkei_strncpy_len_aon (d, d_len, s, s_len);
 }
 
 static inline uint64_t
 arikkei_strncpy_shorten (uint8_t *d, uint64_t d_len, const uint8_t *s)
 {
 	uint64_t s_len = (s) ? strlen ((const char *) s) : 0;
-	return arikkei_strcpy_len_shorten (d, d_len, s, s_len);
+	return arikkei_strncpy_len_shorten (d, d_len, s, s_len);
 }
 
 /*
