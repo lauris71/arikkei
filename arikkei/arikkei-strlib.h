@@ -28,7 +28,7 @@ extern "C" {
  /**
   * @brief Copies MIN(d_len, s_len) bytes from source to destination
   * 
-  * The destination can be NULL, in that case nothing is copied but the length is still returned
+  * The destination can be NULL, in that case nothing is copied but the length is still returned.
   * 
   * @param d the destination buffer
   * @param d_len the destination buffer length
@@ -37,8 +37,50 @@ extern "C" {
   * @return s_len
   */
 uint64_t arikkei_memcpy (uint8_t *d, uint64_t d_len, const uint8_t *s, uint64_t s_len);
+/**
+ * @brief Copies MIN(s_len, d_len) string from source to destination and terminate with 0
+ * 
+ * Unless d_len is 0 the terminating 0 is always written.
+ * NULL source is treated as zero-length string.
+ * If the destination is NULL, nothing is copied but the length is still returned.
+ * 
+ * @param d the destination buffer
+ * @param d_len the destination buffer length
+ * @param s the source buffer
+ * @param s_len the source buffer length
+ * @return s_len
+ */
 uint64_t arikkei_strcpy_len (uint8_t *d, uint64_t d_len, const uint8_t *s, uint64_t s_len);
+/**
+ * @brief Copies string from source to destination if it fits
+ * 
+ * If source (with terminator) does not fit into destination nothing is copied (but length is still returned)
+ * Unless d_len is 0 the terminating 0 is always written.
+ * NULL source is treated as zero-length string.
+ * If the destination is NULL, nothing is copied but the length is still returned.
+ * 
+ * @param d the destination buffer
+ * @param d_len the destination buffer length
+ * @param s the source buffer
+ * @param s_len the source buffer length
+ * @return s_len
+ */
 uint64_t arikkei_strcpy_len_aon (uint8_t *d, uint64_t d_len, const uint8_t *s, uint64_t s_len);
+/**
+ * @brief Copies string from source to destination, shortening it if needed
+ * 
+ * If source (with terminator) does not fit into destination, the string is shortened by replacing
+ * tghe middle part with ... (but full source length is still returned)
+ * Unless d_len is 0 the terminating 0 is always written.
+ * NULL source is treated as zero-length string.
+ * If the destination is NULL, nothing is copied but the length is still returned.
+
+ * @param d the destination buffer
+ * @param d_len the destination buffer length
+ * @param s the source buffer
+ * @param s_len the source buffer length
+ * @return s_len
+ */
 uint64_t arikkei_strcpy_len_shorten (uint8_t *d, uint64_t d_len, const uint8_t *s, uint64_t s_len);
 
 static inline uint64_t
