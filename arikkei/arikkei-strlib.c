@@ -294,7 +294,7 @@ arikkei_dtoa_simple (uint8_t *d, uint64_t len, double val, unsigned int precisio
 	if (max_frac < min_frac) max_frac = min_frac;
 
 	unsigned int negative = 0;
-	if (val < 0) {
+	if (signbit(val)) {
 		negative = 1;
 		val = -val;
 	}
