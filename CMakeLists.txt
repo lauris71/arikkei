@@ -20,4 +20,5 @@ endif()
 # If this is part of another project, inform the parent build system
 if(NOT PROJECT_IS_TOP_LEVEL)
   set(HAS_ARIKKEI true PARENT_SCOPE)
+  set(ARIKKEI_LIBDIR ${CMAKE_BINARY_DIR}/arikkei/arikkei PARENT_SCOPE)
 endif()

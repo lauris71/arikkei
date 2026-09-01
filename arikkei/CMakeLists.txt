@@ -30,6 +30,9 @@ add_library(arikkei STATIC
 
 set_property(TARGET arikkei PROPERTY POSITION_INDEPENDENT_CODE ON)
 
+# Debug builds produce libarikkeid; consumers linking the target never see the difference
+set_target_properties(arikkei PROPERTIES DEBUG_POSTFIX d)
+
 target_include_directories(arikkei PUBLIC
     ${PROJECT_SOURCE_DIR}
 )

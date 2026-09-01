@@ -1,5 +1,3 @@
-set(CMAKE_BUILD_TYPE Debug)
-
 find_library(MATH_LIBRARY m)
 
 add_executable(arikkei_test
@@ -10,8 +8,9 @@ add_executable(arikkei_test
 
 target_compile_definitions(arikkei_test PRIVATE UNITY_INCLUDE_DOUBLE)
 target_include_directories(arikkei_test PRIVATE ${CMAKE_SOURCE_DIR} ..)
-target_link_directories(arikkei_test PRIVATE ${CMAKE_BINARY_DIR}/libarikkei)
 
+# Linking the target resolves the library location, name (libarikkei/libarikkeid)
+# and per-config subdirectory automatically
 target_link_libraries(arikkei_test PRIVATE arikkei)
 
 if(MATH_LIBRARY)
