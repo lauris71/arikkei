@@ -64,20 +64,6 @@ val_ptr(ArikkeiDict *dict, ArikkeiDictEntry *entry)
 	return (char *) entry + dict->val_offset;
 }
 
-static void *
-dict_key_ptr(ArikkeiDict *dict, unsigned int pos)
-{
-	ArikkeiDictEntry *entry = dict_entry_ptr(dict, pos);
-	return (char *) entry + dict->key_offset;
-}
-
-static void *
-dict_val_ptr(ArikkeiDict *dict, unsigned int pos)
-{
-	ArikkeiDictEntry *entry = dict_entry_ptr(dict, pos);
-	return (char *) entry + dict->val_offset;
-}
-
 #define ROOT_ENTRY(d,i) ((ArikkeiDictEntry *) ((char *) (d)->entries + (d)->root_size * (d)->entry_size + (i) * (d)->entry_size))
 
 #define ENTRY(d,i) ((ArikkeiDictEntry *) ((char *) (d)->entries + (i) * (d)->entry_size))

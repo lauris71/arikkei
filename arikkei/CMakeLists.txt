@@ -2,6 +2,7 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "Build architectures for Mac OS X" FORCE)
 
 set(ARIKKEI_HEADERS
+	allocator.h
 	arikkei-cache.h
 	arikkei-dict.h
 	arikkei-iolib.h
@@ -13,6 +14,7 @@ set(ARIKKEI_HEADERS
 )
 
 set(ARIKKEI_SOURCES
+	allocator.c
 	arikkei-iolib.c
 	arikkei-strlib.c
 	arikkei-cache.c

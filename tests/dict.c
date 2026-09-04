@@ -23,14 +23,7 @@ copy_key (void *dst, const void *src)
 static void
 free_key (void *key)
 {
-    int *k = (int *) key;
     n_keys -= 1;
-}
-
-static void
-copy_val (void *dst, const void *src)
-{
-    memcpy(dst, src, val_size);
 }
 
 static void

@@ -536,7 +536,6 @@ arikkei_utf8_strnlen_bytes (const uint8_t *s, uint64_t s_len)
 {
 	if (!s || !s_len) return 0;
 	const uint8_t *p = s;
-	uint64_t len = 0;
 	const uint8_t *e = p + s_len;
 	int uval = arikkei_utf8_get_unicode(&p, e - p);
 	while (uval > 0) {

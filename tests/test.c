@@ -17,6 +17,7 @@ static void test_utf8();
 static void test_utf16();
 
 void test_dict();
+void test_allocator();
 
 void setUp(void) {
     // set stuff up here
@@ -49,6 +50,8 @@ main(int argc, const char *argv[])
             RUN_TEST(test_utf16);
         } else if (!strcmp(argv[i], "dict")) {
             RUN_TEST(test_dict);
+        } else if (!strcmp(argv[i], "allocator")) {
+            RUN_TEST(test_allocator);
         }
     }
     return UNITY_END();
