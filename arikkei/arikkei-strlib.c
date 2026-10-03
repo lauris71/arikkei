@@ -229,7 +229,7 @@ arikkei_strtod_exp (const uint8_t *s, uint64_t len, double *val)
 {
 	double lval;
 	unsigned int p = arikkei_strtod_simple (s, len, &lval);
-	if (!p || (p >= len)) return 0;
+	if (!p) return 0;
 	if ((s[p] == 'e') || (s[p] == 'E')) {
 		int64_t exval;
 		unsigned int exlen = arikkei_strtoll (s + p + 1, len - p - 1, &exval);
