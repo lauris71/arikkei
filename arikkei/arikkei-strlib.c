@@ -380,7 +380,7 @@ unsigned int
 arikkei_dtoa_exp (uint8_t *d, uint64_t len, double val,
 		  unsigned int precision, int min_exp, int max_exp)
 {
-	if (val == 0.0) {
+	if (!isfinite(val) || (val == 0.0)) {
 		return arikkei_dtoa_simple (d, len, val, precision, 0, precision);
 	}
 	double eval = floor (log10 (fabs (val)));
