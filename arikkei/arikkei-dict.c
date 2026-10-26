@@ -30,16 +30,6 @@
 #define EMPTY 0
 #define END 1
 
-struct _ArikkeiDictEntry {
-	// 0 - empty entry
-	// 1 - end of chain
-	uint32_t next;
-	uint32_t filler;
-	uint8_t key[8];
-	uint8_t val[8];
-	uint64_t filler2;
-};
-
 static ArikkeiDictEntry *
 entry_ptr(ArikkeiDict *dict, ArikkeiDictEntry *entries, unsigned int pos)
 {
@@ -69,6 +59,8 @@ val_ptr(ArikkeiDict *dict, ArikkeiDictEntry *entry)
 #define ENTRY(d,i) ((ArikkeiDictEntry *) ((char *) (d)->entries + (i) * (d)->entry_size))
 #define ENTRY_IS_EMPTY(e) ((e)->next == EMPTY)
 #define ENTRY_IS_LAST(e) ((e)->next == END)
+
+/* NULL key indicates that we want to keep the existing key */
 
 static void
 set_entry(ArikkeiDict *dict, unsigned int pos, unsigned int next, const void *key, const void *val, unsigned int replace)
@@ -150,6 +142,24 @@ arikkei_dict_setup_sizes (ArikkeiDict *dict, unsigned int hashsize,
 	dict->free = dict->root_size;
 	dict->hash = hash;
 	dict->equal = equal;
+}
+
+void
+arikkei_dict_setup(ArikkeiDict *dict, unsigned int hashsize)
+{
+	/* Sanity checks */
+	arikkei_return_if_fail(dict != NULL);
+	arikkei_return_if_fail(hashsize >= 3);
+	arikkei_return_if_fail(dict->key_offset >= 4);
+	arikkei_return_if_fail(dict->val_offset >= 4);
+	arikkei_return_if_fail(dict->hash != NULL);
+	arikkei_return_if_fail(dict->equal != NULL);
+
+	dict->root_size = hashsize;
+	dict->size = 3 * hashsize;
+	dict->free = hashsize;
+	dict->entry_size = align16(dict->val_offset + dict->val_size);
+	dict->entries = allocate_entries(dict->size, dict->root_size, dict->entry_size);
 }
 
 static void

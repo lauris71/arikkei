@@ -22,16 +22,17 @@ extern "C" {
 typedef struct _ArikkeiDict ArikkeiDict;
 typedef struct _ArikkeiDictEntry ArikkeiDictEntry;
 
+struct _ArikkeiDictEntry {
+	// 0 - empty entry
+	// 1 - end of chain
+	uint32_t next;
+};
+
 struct _ArikkeiDict {
-	unsigned int root_size;
-	unsigned int size;
-	unsigned int entry_size;
 	uint16_t key_offset;
 	uint16_t key_size;
 	uint16_t val_offset;
 	uint16_t val_size;
-	ArikkeiDictEntry *entries;
-	unsigned int free;
 	unsigned int (*hash) (const void *key);
 	/**
 	 * @brief Compare two keys for equality
@@ -45,8 +46,21 @@ struct _ArikkeiDict {
 	void (*free_key) (void *key);
 	void (*copy_value) (void *dst, const void *src);
 	void (*free_value) (void *value);
+	/* These should be left zeros for static initializer */
+	unsigned int root_size;
+	unsigned int size;
+	unsigned int free;
+	unsigned int entry_size;
+	ArikkeiDictEntry *entries;
 };
 
+/**
+ * @brief Set up ArikkeiDict with already initialized data
+ * 
+ * @param dict An partially-initialized ArikkeiDict
+ * @param hashsize The initial hash size
+ */
+void arikkei_dict_setup(ArikkeiDict *dict, unsigned int hashsize);
 void arikkei_dict_setup_full (ArikkeiDict *dict, unsigned int hashsize,
 			      unsigned int (*hash) (const void *key),
 			      unsigned int (*equal) (const void *lhs, const void *rhs));
