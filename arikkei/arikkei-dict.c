@@ -16,6 +16,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
+#include <assert.h>
 
 #include "arikkei-dict.h"
 #include "arikkei-utils.h"
@@ -63,10 +64,11 @@ val_ptr(ArikkeiDict *dict, ArikkeiDictEntry *entry)
 /* NULL key indicates that we want to keep the existing key */
 
 static void
-set_entry(ArikkeiDict *dict, unsigned int pos, unsigned int next, const void *key, const void *val, unsigned int replace)
+set_entry(ArikkeiDict *dict, unsigned int pos, unsigned int next, uint32_t hash, const void *key, const void *val, unsigned int replace)
 {
 	ArikkeiDictEntry *entry = dict_entry_ptr(dict, pos);
 	entry->next = next;
+	entry->hash = hash;
 	if (key) {
 		void *key_ptr = (char *) entry + dict->key_offset;
 		if (replace && dict->free_key) dict->free_key(key_ptr);
@@ -150,8 +152,8 @@ arikkei_dict_setup(ArikkeiDict *dict, unsigned int hashsize)
 	/* Sanity checks */
 	arikkei_return_if_fail(dict != NULL);
 	arikkei_return_if_fail(hashsize >= 3);
-	arikkei_return_if_fail(dict->key_offset >= 4);
-	arikkei_return_if_fail(dict->val_offset >= 4);
+	arikkei_return_if_fail(dict->key_offset >= 8);
+	arikkei_return_if_fail(dict->val_offset >= 8);
 	arikkei_return_if_fail(dict->hash != NULL);
 	arikkei_return_if_fail(dict->equal != NULL);
 
@@ -219,21 +221,24 @@ arikkei_dict_release (ArikkeiDict *dict)
 void
 arikkei_dict_insert(ArikkeiDict *dict, const void *key, const void *val)
 {
-	unsigned int pos = dict->hash(key) % dict->root_size;
+	uint32_t hash = dict->hash(key);
+	unsigned int pos = hash % dict->root_size;
 	ArikkeiDictEntry *root_entry = dict_entry_ptr(dict, pos);
 	if(root_entry->next == EMPTY) {
-		set_entry(dict, pos, END, key, val, 0);
+		set_entry(dict, pos, END, hash, key, val, 0);
 		return;
 	}
-	if (dict->equal(key, key_ptr(dict, root_entry))) {
-		set_entry(dict, pos, root_entry->next, NULL, val, 1);
+	if ((hash == root_entry->hash) && dict->equal(key, key_ptr(dict, root_entry))) {
+		assert(hash == root_entry->hash);
+		set_entry(dict, pos, root_entry->next, hash, NULL, val, 1);
 		return;
 	}
 	pos = root_entry->next;
 	while (pos != END) {
 		ArikkeiDictEntry *entry = dict_entry_ptr(dict, pos);
-		if (dict->equal(key, key_ptr(dict, entry))) {
-			set_entry(dict, pos, entry->next, NULL, val, 1);
+		if ((hash == entry->hash) && dict->equal(key, key_ptr(dict, entry))) {
+			assert(hash == entry->hash);
+			set_entry(dict, pos, entry->next, hash, NULL, val, 1);
 			return;
 		}
 		pos = entry->next;
@@ -242,7 +247,7 @@ arikkei_dict_insert(ArikkeiDict *dict, const void *key, const void *val)
 		pos = dict->free;
 		ArikkeiDictEntry *entry = dict_entry_ptr(dict, pos);
 		dict->free = entry->next;
-		set_entry(dict, pos, root_entry->next, key, val, 0);
+		set_entry(dict, pos, root_entry->next, hash, key, val, 0);
 		root_entry->next = pos;
 		return;
 	}
@@ -253,10 +258,12 @@ arikkei_dict_insert(ArikkeiDict *dict, const void *key, const void *val)
 unsigned int
 arikkei_dict_remove(ArikkeiDict *dict, const void *key)
 {
-	unsigned int root = dict->hash(key) % dict->root_size;
+	uint32_t hash = dict->hash(key);
+	unsigned int root = hash % dict->root_size;
 	ArikkeiDictEntry *root_entry = dict_entry_ptr(dict, root);
 	if (root_entry->next == EMPTY) return 0;
-	if (dict->equal (key, key_ptr(dict, root_entry))) {
+	if ((hash == root_entry->hash) && dict->equal (key, key_ptr(dict, root_entry))) {
+		assert(hash == root_entry->hash);
 		/* Have to remove root key */
 		clear_entry(dict, root_entry);
 		/* Move next key to root position */
@@ -276,7 +283,8 @@ arikkei_dict_remove(ArikkeiDict *dict, const void *key)
 	int pos = root_entry->next;
 	while (pos != END) {
 		ArikkeiDictEntry *entry = dict_entry_ptr(dict, pos);
-		if (dict->equal (key, key_ptr(dict, entry))) {
+		if ((hash == entry->hash) && dict->equal (key, key_ptr(dict, entry))) {
+			assert(hash == entry->hash);
 			clear_entry(dict, entry);
 			prev_entry->next = entry->next;
 			entry->next = dict->free;
@@ -326,13 +334,20 @@ arikkei_dict_exists_pval (ArikkeiDict *dict, const void *key)
 const void *
 arikkei_dict_lookup (ArikkeiDict *dict, const void *key)
 {
-	unsigned int pos = dict->hash(key) % dict->root_size;
+	uint32_t hash = dict->hash(key);
+	unsigned int pos = hash % dict->root_size;
 	ArikkeiDictEntry *entry = dict_entry_ptr(dict, pos);
 	if (entry->next == EMPTY) return NULL;
-	if (dict->equal (key, key_ptr(dict, entry))) return val_ptr(dict, entry);
+	if ((hash == entry->hash) && dict->equal (key, key_ptr(dict, entry))) {
+		assert(hash == entry->hash);
+		return val_ptr(dict, entry);
+	}
 	for (pos = entry->next; pos != END; pos = entry->next) {
 		entry = dict_entry_ptr(dict, pos);
-		if (dict->equal (key, key_ptr(dict, entry))) return val_ptr(dict, entry);
+		if ((hash == entry->hash) && dict->equal (key, key_ptr(dict, entry))) {
+			assert(hash == entry->hash);
+			return val_ptr(dict, entry);
+		}
 	}
 	return NULL;
 }
@@ -352,7 +367,10 @@ arikkei_dict_lookup_foreign (ArikkeiDict *dict, const void *foreign_key, unsigne
 	if (dict_entry_ptr(dict, pos)->next == EMPTY) return NULL;
 	do {
 		ArikkeiDictEntry *entry = dict_entry_ptr(dict, pos);
-		if (equal (foreign_key, key_ptr(dict, entry))) return val_ptr(dict, entry);
+		if ((hash == entry->hash) && equal (foreign_key, key_ptr(dict, entry))) {
+			assert(hash == entry->hash);
+			return val_ptr(dict, entry);
+		}
 		pos = entry->next;
 	} while (pos != END);
 	return NULL;

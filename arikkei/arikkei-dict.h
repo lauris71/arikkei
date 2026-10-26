@@ -26,6 +26,7 @@ struct _ArikkeiDictEntry {
 	// 0 - empty entry
 	// 1 - end of chain
 	uint32_t next;
+	uint32_t hash;
 };
 
 struct _ArikkeiDict {
