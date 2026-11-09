@@ -16,6 +16,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,9 +25,27 @@ extern "C" {
 #ifdef _WIN32
 #define arikkei_aligned_alloc(a,s) _aligned_malloc(s,a)
 #define arikkei_aligned_free(p) _aligned_free(p)
+#define arikkei_aligned_realloc(a,p,s_old,s_new) _aligned_realloc(p,s,a)
 #else
 #define arikkei_aligned_alloc(a,s) aligned_alloc(a,s)
 #define arikkei_aligned_free(p) free(p)
+static inline void *
+arikkei_aligned_realloc(size_t alignment, void *ptr, size_t old_size, size_t new_size)
+{
+    if (new_size == 0) {
+        free(ptr);
+        return NULL;
+    }
+    if (ptr == NULL) {
+        return aligned_alloc(alignment, new_size);
+    }
+    void *new_ptr = aligned_alloc(alignment, new_size);
+    if (!new_ptr) return NULL;
+    size_t copy_size = (old_size < new_size) ? old_size : new_size;
+    memcpy(new_ptr, ptr, copy_size);
+    free(ptr);
+    return new_ptr;
+}
 #endif
 
 /* All file names are UTF-8 */
