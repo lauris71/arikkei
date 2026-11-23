@@ -30,6 +30,21 @@
 #define ARIKKEI_ALIGN_16 __attribute__ ((aligned (16)))
 #endif
 
+/* Thread-local storage class specifier */
+#if defined(__cplusplus)
+# define ARIKKEI_THREAD_LOCAL thread_local
+#elif defined(_MSC_VER)
+# define ARIKKEI_THREAD_LOCAL __declspec(thread)
+#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 202311L)
+# define ARIKKEI_THREAD_LOCAL thread_local
+#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
+# define ARIKKEI_THREAD_LOCAL _Thread_local
+#elif defined(__GNUC__) || defined(__clang__)
+# define ARIKKEI_THREAD_LOCAL __thread
+#else
+# error "no thread-local storage support"
+#endif
+
 /* Pointer arithmetic */
 #define ARIKKEI_OFFSET(b,m) ((char *) &((b *) 0)->m - (char *) 0)
 #define ARIKKEI_INT_TO_POINTER(v) (void *) ((char *) 0 + (v))
